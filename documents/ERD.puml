@@ -7,7 +7,6 @@ entity "User" as user {
   password : varchar
   email : varchar
   profile_picture : varchar
-  alamat_id : int <<FK>>
 }
 
 entity "Admin" as admin {
@@ -53,6 +52,7 @@ entity "Brand" as brand {
 
 entity "Alamat" as alamat {
   *alamat_id : int <<PK>>
+  user_id : int <<FK>>
   --
   alamat_lengkap : text
   kel : int
@@ -82,7 +82,7 @@ entity "Wishlist" as wishlist {
 }
 
 ' Relasi
-user }o--|| alamat
+user ||--o{ alamat       : has
 produk }o--|| kategori
 produk }o--|| brand
 admin_log }o--|| admin
