@@ -1,0 +1,15 @@
+package models
+
+import (
+	"gorm.io/gorm"
+)
+
+type User struct {
+	gorm.Model
+	Username       string `gorm:"size:100;uniqueIndex"`
+	Password       string
+	Email          string `gorm:"size:150;uniqueIndex"`
+	ProfilePicture string
+	AlamatID       uint
+	Alamat         Alamat
+}
