@@ -10,6 +10,5 @@ type User struct {
 	Password       string
 	Email          string `gorm:"size:150;uniqueIndex"`
 	ProfilePicture string
-	AlamatID       uint
-	Alamat         Alamat
+	Alamat      []Alamat `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
