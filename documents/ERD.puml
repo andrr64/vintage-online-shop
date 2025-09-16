@@ -1,0 +1,95 @@
+@startuml
+
+entity "User" as user {
+  *user_id : int <<PK>>
+  --
+  username : varchar
+  password : varchar
+  email : varchar
+  profile_picture : varchar
+  alamat_id : int <<FK>>
+}
+
+entity "Admin" as admin {
+  *admin_id : int <<PK>>
+  --
+  username : varchar
+  password : varchar
+}
+
+entity "Admin_Log" as admin_log {
+  *log_id : int <<PK>>
+  admin_id : int <<FK>>
+  action : varchar
+  timestamp : datetime
+}
+
+entity "Produk" as produk {
+  *produk_id : int <<PK>>
+  --
+  nama_produk : varchar
+  brand_id : int <<FK>>
+  size : varchar
+  warna : varchar
+  uploaded_at : datetime
+  last_update : datetime
+  kategori_id : int <<FK>>
+  description : text
+  harga : decimal
+  stok : int
+}
+
+entity "Kategori" as kategori {
+  *kategori_id : int <<PK>>
+  --
+  nama_kategori : varchar
+}
+
+entity "Brand" as brand {
+  *brand_id : int <<PK>>
+  --
+  nama_brand : varchar
+}
+
+entity "Alamat" as alamat {
+  *alamat_id : int <<PK>>
+  --
+  alamat_lengkap : text
+  kel : int
+  kec : int
+  kab : int
+  prov : int
+  kode_pos : varchar
+}
+
+entity "Cart" as cart {
+  *cart_id : int <<PK>>
+  user_id : int <<FK>>
+  created_at : datetime
+}
+
+entity "Cart_Detail" as cart_detail {
+  *cart_id : int <<FK>>
+  *produk_id : int <<FK>>
+  jumlah : int
+}
+
+entity "Wishlist" as wishlist {
+  *wishlist_id : int <<PK>>
+  user_id : int <<FK>>
+  produk_id : int <<FK>>
+  created_at : datetime
+}
+
+' Relasi
+user }o--|| alamat
+produk }o--|| kategori
+produk }o--|| brand
+admin_log }o--|| admin
+cart }o--|| user
+cart_detail }o--|| cart
+cart_detail }o--|| produk
+wishlist }o--|| user
+wishlist }o--|| produk
+
+@enduml

@@ -1,20 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"vintage-server/config"
+	"vintage-server/models"
+	"vintage-server/routes"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World! Ini Go server 🚀")
-}
-
 func main() {
-	http.HandleFunc("/", handler)
+	config.ConnectDatabase()
 
-	fmt.Println("Server jalan di http://localhost:8080")
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err)
-	}
+	// Auto migrate schema
+	config.DB.AutoMigrate(&models.User{})
+
+	// Setup routes
+	r := routes.SetupRouter()
+	r.Run(":8080")
 }
