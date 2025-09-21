@@ -45,6 +45,7 @@ func (s *userService) Register(input dto.RegisterUserDTO) (dto.ResponseRegisterU
 		return dto.ResponseRegisterUserDTO{}, errors.New("failed to create user")
 	}
 
+	
 	return dto.ResponseRegisterUserDTO{
 		ID:       user.ID,
 		Username: user.Username,

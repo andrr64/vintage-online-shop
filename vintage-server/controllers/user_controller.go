@@ -62,6 +62,18 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// Set cookie JWT
+	c.SetCookie(
+		"access_token", // nama cookie
+		token,          // value
+		3600*24,        // umur (1 hari, dalam detik)
+		"/",            // path
+		"",             // domain (kosong = current domain)
+		true,           // secure (true kalau pakai HTTPS)
+		true,           // httpOnly
+	)
+
+	// Response tetap bisa kirim token kalau mau
 	c.JSON(http.StatusOK, dto.CommonResponse[map[string]string]{
 		Message: "Login successful",
 		Success: true,
