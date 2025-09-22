@@ -14,6 +14,11 @@ type LoginUserDTO struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type BodyUpdateAccountDTO struct {
+    Username string `json:"username"` // opsional
+    Email    string `json:"email"`    // opsional
+}
+
 // DTO untuk response setelah register
 type ResponseRegisterUserDTO struct {
 	ID       uint   `json:"id"`

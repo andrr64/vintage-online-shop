@@ -7,16 +7,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"vintage-server/helpers/response_helper"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr, err := c.Cookie("access_token")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   err.Error(),
-				"cookies": c.Request.Cookies(),
-			})
+			response_helper.Failed[any](c, http.StatusUnauthorized, "Unauthorized", nil)
 			c.Abort()
 			return
 		}
@@ -53,7 +51,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			"username": claims["username"].(string),
 			// email & fullname bisa diambil dari DB nanti
 		}
-        c.Set("currentUser", currentUser)
+		c.Set("currentUser", currentUser)
 		c.Next()
 	}
 }

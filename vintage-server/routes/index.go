@@ -1,11 +1,12 @@
 package routes
 
 import (
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"time"
 
-	"vintage-server/routes/v1"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
+	v1 "vintage-server/routes/v1"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
