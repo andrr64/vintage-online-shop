@@ -85,3 +85,11 @@ func (s *userService) Login(input dto.LoginUserDTO) (string, error) {
 
 	return tokenString, nil
 }
+
+func (s *userService) FindByID(userId uint) (*models.User, error) {
+    user, err := s.repo.FindByID(userId)
+    if err != nil {
+        return nil, errors.New("user not found")
+    }
+    return user, nil
+}
