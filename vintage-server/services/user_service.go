@@ -10,4 +10,5 @@ type UserService interface {
 	Register(input dto.RegisterUserDTO) (dto.ResponseRegisterUserDTO, error)
 	Login(input dto.LoginUserDTO) (string, error) // return JWT token
 	FindByID(userId uint) (*models.User, error)
+	UpdateAccount(userID uint, data dto.BodyUpdateAccountDTO) (dto.ResponseUserInfoDTO, error)
 }

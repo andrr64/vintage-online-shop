@@ -45,7 +45,6 @@ func (s *userService) Register(input dto.RegisterUserDTO) (dto.ResponseRegisterU
 		return dto.ResponseRegisterUserDTO{}, errors.New("failed to create user")
 	}
 
-	
 	return dto.ResponseRegisterUserDTO{
 		ID:       user.ID,
 		Username: user.Username,
@@ -87,9 +86,50 @@ func (s *userService) Login(input dto.LoginUserDTO) (string, error) {
 }
 
 func (s *userService) FindByID(userId uint) (*models.User, error) {
-    user, err := s.repo.FindByID(userId)
-    if err != nil {
-        return nil, errors.New("user not found")
-    }
-    return user, nil
+	user, err := s.repo.FindByID(userId)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+	return user, nil
+}
+
+func (s *userService) UpdateAccount(userID uint, data dto.BodyUpdateAccountDTO) (dto.ResponseUserInfoDTO, error) {
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return dto.ResponseUserInfoDTO{}, errors.New("user not found")
+	}
+
+	// update fullname jika diisi
+	if data.Fullname != "" && data.Fullname != user.Fullname {
+		user.Fullname = data.Fullname
+	}
+
+	// cek username jika diisi
+	if data.Username != "" && data.Username != user.Username {
+		exists, _ := s.repo.IsUsernameExists(data.Username)
+		if exists {
+			return dto.ResponseUserInfoDTO{}, errors.New("username already taken")
+		}
+		user.Username = data.Username
+	}
+
+	// cek email jika diisi
+	if data.Email != "" && data.Email != user.Email {
+		exists, _ := s.repo.IsEmailExists(data.Email)
+		if exists {
+			return dto.ResponseUserInfoDTO{}, errors.New("email already taken")
+		}
+		user.Email = data.Email
+	}
+
+	// simpan perubahan
+	if err := s.repo.Update(user); err != nil {
+		return dto.ResponseUserInfoDTO{}, errors.New("failed to update account")
+	}
+
+	return dto.ResponseUserInfoDTO{
+		Username: user.Username,
+		Email:    user.Email,
+		Fullname: user.Fullname,
+	}, nil
 }

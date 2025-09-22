@@ -40,3 +40,23 @@ func (r *userRepo) FindByID(id uint) (*models.User, error) {
 
 	return &user, nil
 }
+
+func (r *userRepo) Update(user *models.User) error {
+	return config.DB.Save(user).Error
+}
+
+func (r *userRepo) IsEmailExists(email string) (bool, error) {
+	var count int64
+	if err := config.DB.Model(&models.User{}).Where("email = ?", email).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *userRepo) IsUsernameExists(username string) (bool, error) {
+	var count int64
+	if err := config.DB.Model(&models.User{}).Where("username = ?", username).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

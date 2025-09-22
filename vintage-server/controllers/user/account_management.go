@@ -77,7 +77,7 @@ func GetAccount(c *gin.Context) {
 		return
 	}
 
-	currentUser := currentUserI.(map[string]interface{})
+	currentUser := currentUserI.(map[string]any)
 	userID := currentUser["id"].(uint)
 
 	user, err := userService.FindByID(userID)
@@ -96,11 +96,25 @@ func GetAccount(c *gin.Context) {
 }
 
 func UpdateProfile(c *gin.Context) {
+	currentUserI, exists := c.Get("currentUser")
+	if !exists {
+		response_helper.Failed[string](c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
 	var input dto.BodyUpdateAccountDTO
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response_helper.Failed[any](c, http.StatusBadRequest, "Invalid input", nil)
+		response_helper.Failed[string](c, http.StatusBadRequest, "Invalid input", nil)
+		return
+	}
+	currentUser := currentUserI.(map[string]any)
+	userID := currentUser["id"].(uint)
+
+	updatedUser, err := userService.UpdateAccount(userID, input)
+
+	if err != nil {
+		response_helper.Failed[any](c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	// nanti proses update pakai userService
+	response_helper.Success(c, &updatedUser, "OK")
 }

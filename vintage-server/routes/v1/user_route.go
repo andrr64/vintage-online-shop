@@ -15,5 +15,6 @@ func RegisterUserRoutes(r *gin.RouterGroup) {
 		users.POST("/logout", userController.Logout)
 
 		users.GET("/account", middlewares.AuthMiddleware(), userController.GetAccount)
+		users.PUT("/account/profile", middlewares.AuthMiddleware(), userController.UpdateProfile)
 	}
 }

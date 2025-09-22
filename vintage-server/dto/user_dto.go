@@ -16,6 +16,7 @@ type LoginUserDTO struct {
 
 type BodyUpdateAccountDTO struct {
     Username string `json:"username"` // opsional
+	Fullname string `json:"fullname"`
     Email    string `json:"email"`    // opsional
 }
 
