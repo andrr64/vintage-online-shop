@@ -1,8 +1,11 @@
 package services
 
 import (
+	"net/http"
+
 	"errors"
 	"vintage-server/dto"
+	"vintage-server/helpers"
 	"vintage-server/models"
 	"vintage-server/repositories"
 
@@ -21,14 +24,14 @@ func NewUserService(repo repositories.UserRepository) UserService {
 	return &userService{repo: repo}
 }
 
-func (s *userService) Register(input dto.RegisterUserDTO) (dto.ResponseRegisterUserDTO, error) {
+func (s *userService) Register(input dto.InputRegisterDTO) (dto.ResponseRegisterUserDTO, error) {
 	// cek username/email
 	if existing, _ := s.repo.FindByUsernameOrEmail(input.Username, input.Email); existing != nil {
 		return dto.ResponseRegisterUserDTO{}, errors.New("username or email already taken")
 	}
 
 	// hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	hashedPassword, err := helpers.GeneratePasswordHash(input.Password)
 	if err != nil {
 		return dto.ResponseRegisterUserDTO{}, errors.New("failed to hash password")
 	}
@@ -53,7 +56,7 @@ func (s *userService) Register(input dto.RegisterUserDTO) (dto.ResponseRegisterU
 	}, nil
 }
 
-func (s *userService) Login(input dto.LoginUserDTO) (string, error) {
+func (s *userService) Login(input dto.InputLoginDTO) (string, error) {
 	user, err := s.repo.FindByEmail(input.Email)
 	if err != nil {
 		return "", errors.New("email or password salah")
@@ -93,7 +96,7 @@ func (s *userService) FindByID(userId uint) (*models.User, error) {
 	return user, nil
 }
 
-func (s *userService) UpdateAccount(userID uint, data dto.BodyUpdateAccountDTO) (dto.ResponseUserInfoDTO, error) {
+func (s *userService) UpdateAccount(userID uint, data dto.InputUpdateAccountDTO) (dto.ResponseUserInfoDTO, error) {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
 		return dto.ResponseUserInfoDTO{}, errors.New("user not found")
@@ -132,4 +135,27 @@ func (s *userService) UpdateAccount(userID uint, data dto.BodyUpdateAccountDTO) 
 		Email:    user.Email,
 		Fullname: user.Fullname,
 	}, nil
+}
+
+func (s *userService) UpdatePassword(userID uint, data dto.InputUpdatePasswordDTO) (int, error) {
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return http.StatusNotFound, errors.New("user not found")
+	}
+
+	if !helpers.ComparePassword(data.OldPassword, user.Password) {
+		return http.StatusBadRequest, errors.New("old password is incorrect")
+	}
+
+	hashed, err := helpers.GeneratePasswordHash(data.NewPassword)
+	if err != nil {
+		return http.StatusInternalServerError, errors.New("failed to hash new password")
+	}
+
+	user.Password = hashed
+	if err := s.repo.Update(user); err != nil {
+		return http.StatusInternalServerError, errors.New("failed to update password")
+	}
+
+	return http.StatusOK, nil
 }

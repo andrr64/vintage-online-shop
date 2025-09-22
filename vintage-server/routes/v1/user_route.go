@@ -16,5 +16,6 @@ func RegisterUserRoutes(r *gin.RouterGroup) {
 
 		users.GET("/account", middlewares.AuthMiddleware(), userController.GetAccount)
 		users.PUT("/account/profile", middlewares.AuthMiddleware(), userController.UpdateProfile)
+		users.PUT("/account/password", middlewares.AuthMiddleware(), userController.UpdatePassword)
 	}
 }
