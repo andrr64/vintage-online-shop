@@ -1,8 +1,10 @@
 package v1
 
 import (
-	"github.com/gin-gonic/gin"
 	userController "vintage-server/controllers/user"
+	"vintage-server/middlewares"
+
+	"github.com/gin-gonic/gin"
 )
 
 func RegisterUserRoutes(r *gin.RouterGroup) {
@@ -10,5 +12,8 @@ func RegisterUserRoutes(r *gin.RouterGroup) {
 	{
 		users.POST("/register", userController.Register)
 		users.POST("/login", userController.Login)
+		users.POST("/logout", userController.Logout)
+
+		users.GET("/account", middlewares.AuthMiddleware(), userController.GetAccount)
 	}
 }
