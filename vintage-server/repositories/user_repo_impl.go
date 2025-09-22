@@ -30,3 +30,13 @@ func (r *userRepo) FindByUsernameOrEmail(username, email string) (*models.User, 
 func (r *userRepo) Create(user *models.User) error {
 	return config.DB.Create(user).Error
 }
+
+func (r *userRepo) FindByID(id uint) (*models.User, error) {
+	var user models.User
+
+	if err := config.DB.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
