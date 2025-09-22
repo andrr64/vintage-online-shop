@@ -16,8 +16,8 @@ entity "Admin" as admin {
   password : varchar
 }
 
-entity "Transaksi" as transaksi {
-  *transaksi_id : int <<PK>>
+entity "Transaction" as transaction {
+  *transaction_id : int <<PK>>
   user_id : int <<FK>>
   --
   total_amount : decimal
@@ -27,12 +27,12 @@ entity "Transaksi" as transaksi {
   updated_at : datetime
 }
 
-entity "Detail_Transaksi" as detail_transaksi {
+entity "Transaction_Detail" as transaction_detail {
   *detail_id : int <<PK>>
-  transaksi_id : int <<FK>>
+  transaction_id : int <<FK>>
   version_id : int <<FK>>
   --
-  qty : int
+  quantity : int
   total : decimal
 }
 
@@ -44,50 +44,50 @@ entity "Admin_Log" as admin_log {
   timestamp : datetime
 }
 
-entity "Produk" as produk {
-  *produk_id : int <<PK>>
+entity "Product" as product {
+  *product_id : int <<PK>>
   --
-  nama_produk : varchar
+  product_name : varchar
   brand_id : int <<FK>>
-  kategori_id : int <<FK>>
+  category_id : int <<FK>>
 }
 
-entity "Produk_Version" as produk_version {
+entity "Product_Version" as product_version {
   *version_id : int <<PK>>
-  produk_id : int <<FK>>
+  product_id : int <<FK>>
   previous_version_id : int <<FK, nullable>>
   --
   size : varchar
-  warna : varchar
+  color : varchar
   description : text
-  harga : decimal
-  stok : int
+  price : decimal
+  stock : int
   active_from : datetime
   active_to : datetime <<nullable>>
 }
 
-entity "Kategori" as kategori {
-  *kategori_id : int <<PK>>
+entity "Category" as category {
+  *category_id : int <<PK>>
   --
-  nama_kategori : varchar
+  category_name : varchar
 }
 
 entity "Brand" as brand {
   *brand_id : int <<PK>>
   --
-  nama_brand : varchar
+  brand_name : varchar
 }
 
-entity "Alamat" as alamat {
-  *alamat_id : int <<PK>>
+entity "Address" as address {
+  *address_id : int <<PK>>
   user_id : int <<FK>>
   --
-  alamat_lengkap : text
-  kel : int
-  kec : int
-  kab : int
-  prov : int
-  kode_pos : varchar
+  full_address : text
+  sub_district : int
+  district : int
+  city : int
+  province : int
+  postal_code : varchar
 }
 
 entity "Cart" as cart {
@@ -99,7 +99,7 @@ entity "Cart" as cart {
 entity "Cart_Detail" as cart_detail {
   *cart_id : int <<FK>>
   *version_id : int <<FK>>
-  jumlah : int
+  quantity : int
 }
 
 entity "Wishlist" as wishlist {
@@ -110,22 +110,22 @@ entity "Wishlist" as wishlist {
 }
 
 ' =========================
-' Relasi
+' Relationships
 ' =========================
-user ||--o{ alamat             : has
-produk }o--|| kategori
-produk }o--|| brand
+user ||--o{ address             : has
+product }o--|| category
+product }o--|| brand
 admin_log }o--|| admin
 cart }o--|| user
 cart_detail }o--|| cart
-cart_detail }o--|| produk_version
+cart_detail }o--|| product_version
 wishlist }o--|| user
-wishlist }o--|| produk_version
-transaksi }o--|| user
-detail_transaksi }o--|| transaksi
-detail_transaksi }o--|| produk_version
-produk ||--o{ produk_version
-produk_version }o--|| produk
-produk_version }o--|| produk_version : previous
+wishlist }o--|| product_version
+transaction }o--|| user
+transaction_detail }o--|| transaction
+transaction_detail }o--|| product_version
+product ||--o{ product_version
+product_version }o--|| product
+product_version }o--|| product_version : previous
 
 @enduml
