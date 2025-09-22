@@ -21,3 +21,10 @@ type ResponseRegisterUserDTO struct {
 	Fullname string `json:"fullname"`
 	Email    string `json:"email"`
 }
+
+
+type ResponseUserInfoDTO struct {
+    Username string `json:"username"`
+    Email    string `json:"email"`
+    Fullname string `json:"fullname"`
+}

@@ -5,3 +5,8 @@ type CommonResponse[T any] struct {
 	Success bool   `json:"success"`
 	Data    *T     `json:"data,omitempty"`
 }
+
+type CurrentUser struct {
+    ID       uint
+    Username string
+}
