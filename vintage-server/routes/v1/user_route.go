@@ -2,13 +2,13 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"vintage-server/controllers"
+	userController "vintage-server/controllers/user"
 )
 
 func RegisterUserRoutes(r *gin.RouterGroup) {
-	users := r.Group("/users")
+	users := r.Group("/user")
 	{
-		users.POST("/register", controllers.Register)
-		users.POST("/login", controllers.Login)
+		users.POST("/register", userController.Register)
+		users.POST("/login", userController.Login)
 	}
 }
