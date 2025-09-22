@@ -129,6 +129,17 @@ func Logout(c *gin.Context) {
 	})
 }
 
+// GetAccount godoc
+// @Summary Get current user account info
+// @Description Retrieve the current logged-in user's account information (username, email, fullname)
+// @Tags User/Account Management
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.CommonResponse[dto.ResponseUserInfoDTO]
+// @Failure 401 {object} dto.CommonResponse[string]
+// @Failure 404 {object} dto.CommonResponse[string]
+// @Security ApiKeyAuth
+// @Router /api/v1/user/account [get]
 func GetAccount(c *gin.Context) {
 	// Ambil user dari context / JWT middleware
 	currentUserI, exists := c.Get("currentUser")
