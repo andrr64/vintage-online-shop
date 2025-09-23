@@ -17,6 +17,16 @@ var authService = adminService.NewAdminAuthService(
 	repo.NewAdminRepository(),
 )
 
+// Login godoc
+// @Summary Admin login
+// @Description Login for admin users
+// @Tags Admin/Auth
+// @Accept json
+// @Produce json
+// @Param input body dto.InputAdminLoginDTO true "Login credentials"
+// @Success 200 {object} dto.CommonResponse[dto.ResponseAdminLogin]
+// @Failure 400 {object} dto.CommonResponse[string]
+// @Router /admin/auth/login [post]
 func Login(c *gin.Context) {
 	var input dto.InputAdminLoginDTO
 	if err := c.ShouldBind(&input); err != nil {
@@ -31,6 +41,16 @@ func Login(c *gin.Context) {
 	response_helper.Success(c, &response, "OK")
 }
 
+// Register godoc
+// @Summary Admin register
+// @Description Register new admin account
+// @Tags Admin/Auth
+// @Accept json
+// @Produce json
+// @Param input body dto.InputAdminRegisterDTO true "Register data"
+// @Success 200 {object} dto.CommonResponse[dto.ResponseAdminLogin]
+// @Failure 400 {object} dto.CommonResponse[string]
+// @Router /admin/auth/register [post]
 func Register(c *gin.Context) {
 	var input dto.InputAdminRegisterDTO
 
@@ -44,5 +64,4 @@ func Register(c *gin.Context) {
 		return
 	}
 	response_helper.Success(c, &result, "OK")
-
 }
