@@ -5,5 +5,6 @@ import (
 )
 
 type AdminRepository interface {
+	IsExists(username string) (bool, error)
 	CreateAccount(username string, hPassword string) (*models.Admin, error)
 }

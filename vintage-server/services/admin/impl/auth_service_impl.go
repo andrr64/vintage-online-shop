@@ -12,34 +12,37 @@ type authService struct {
 	repo repositories.AdminRepository
 }
 
+// NewAdminAuthService buat instance service
 func NewAdminAuthService(repo repositories.AdminRepository) adminService.AuthService {
 	return &authService{repo: repo}
 }
 
-// Method Login sekarang sesuai interface
+// Login sesuai interface AuthService
 func (s *authService) Login(input dto.InputAdminLoginDTO) (string, error) {
-	// Contoh implementasi dummy
+	// Dummy login
 	if input.Username == "admin" && input.Password == "admin123" {
-		randomString := "token-xyz"
-		return randomString, nil
+		randomToken := "token-xyz"
+		return randomToken, nil
 	}
 
 	return "", fmt.Errorf("invalid credentials")
 }
 
+// Register buat mendaftarkan admin baru
 func (s *authService) Register(input dto.InputAdminRegisterDTO) (dto.ResponseAdminRegister, error) {
 	username := input.Username
 	password := input.Password
 
-	hashedPassword, error := helpers.GeneratePasswordHash(password)
-	if error != nil {
-		return dto.ResponseAdminRegister{}, error
+	// Hash password
+	hashedPassword, err := helpers.GeneratePasswordHash(password)
+	if err != nil {
+		return dto.ResponseAdminRegister{}, err
 	}
 
-	result, error := s.repo.CreateAccount(username, hashedPassword)
-
-	if error != nil {
-		return dto.ResponseAdminRegister{}, nil
+	// Simpan ke repository
+	result, err := s.repo.CreateAccount(username, hashedPassword)
+	if err != nil {
+		return dto.ResponseAdminRegister{}, err
 	}
 
 	return dto.ResponseAdminRegister{
