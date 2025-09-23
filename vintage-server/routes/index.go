@@ -33,6 +33,7 @@ func SetupRouter() *gin.Engine {
 	v1Group := r.Group("api/v1")
 	{
 		v1.RegisterUserRoutes(v1Group)
+		v1.RegisterAdminRoutes(v1Group)
 	}
 
 	return r
