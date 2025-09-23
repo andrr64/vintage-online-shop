@@ -8,15 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	repo "vintage-server/repositories/impl"
-	adminService "vintage-server/services/admin/impl"
+
 )
 
-var authService = adminService.NewAdminAuthService(
-	repo.NewAdminRepository(),
-)
 
-// Login godoc
 // @Summary Admin login
 // @Description Login for admin users
 // @Tags Admin/Auth
