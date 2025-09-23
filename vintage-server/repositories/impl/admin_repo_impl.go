@@ -5,6 +5,8 @@ import (
 	"vintage-server/config"
 	"vintage-server/models"
 	repo "vintage-server/repositories"
+
+	"gorm.io/gorm"
 )
 
 type adminRepo struct{}
@@ -34,10 +36,25 @@ func (r *adminRepo) IsExists(username string) (bool, error) {
 	var admin models.Admin
 	err := config.DB.Where("username = ?", username).First(&admin).Error
 	if err != nil {
-		if errors.Is(err, config.DB.Error) { // atau ganti dengan gorm.ErrRecordNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// tidak ditemukan → berarti belum ada
 			return false, nil
 		}
+		// error lain (misal koneksi DB, dll.)
 		return false, err
 	}
+	// ditemukan
 	return true, nil
+}
+
+func (r *adminRepo) FindByUsername(username string) (*models.Admin, error) {
+	var admin models.Admin
+	err := config.DB.Where("username = ?", username).First(&admin).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &admin, nil
 }
