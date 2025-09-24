@@ -8,11 +8,8 @@ import (
 	"vintage-server/helpers"
 	"vintage-server/models"
 	"vintage-server/repositories"
+	security_jwt "vintage-server/security/jwt"
 
-	"os"
-	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -67,25 +64,13 @@ func (s *userService) Login(input dto.InputLoginDTO) (string, error) {
 		return "", errors.New("invalid password")
 	}
 
-	// ambil secret JWT
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return "", errors.New("JWT secret not set")
-	}
-
-	// generate JWT
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  user.ID,
-		"username": user.Username,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(secret))
+	// generate JWT via helper
+	token, err := security_jwt.CreateUserAccessToken(user.ID, user.Username)
 	if err != nil {
 		return "", errors.New("failed to generate token")
 	}
 
-	return tokenString, nil
+	return token, nil
 }
 
 func (s *userService) FindByID(userId uint) (*models.User, error) {

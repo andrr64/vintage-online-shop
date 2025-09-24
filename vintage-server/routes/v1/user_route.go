@@ -14,8 +14,8 @@ func RegisterUserRoutes(r *gin.RouterGroup) {
 		users.POST("/auth/login", userController.Login)
 		users.POST("/auth/logout", userController.Logout)
 
-		users.GET("/account", middlewares.AuthMiddleware(), userController.GetAccount)
-		users.PUT("/account/profile", middlewares.AuthMiddleware(), userController.UpdateProfile)
-		users.PUT("/account/password", middlewares.AuthMiddleware(), userController.UpdatePassword)
+		users.GET("/account", middlewares.UserAuthMiddleware(), userController.GetAccount)
+		users.PUT("/account/profile", middlewares.UserAuthMiddleware(), userController.UpdateProfile)
+		users.PUT("/account/password", middlewares.UserAuthMiddleware(), userController.UpdatePassword)
 	}
 }

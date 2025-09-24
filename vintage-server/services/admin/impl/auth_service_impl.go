@@ -38,7 +38,7 @@ func (s *authService) Login(input dto.InputAdminLoginDTO) (dto.ResponseAdminLogi
 
 	return dto.ResponseAdminLogin{
 		Username: admin.Username,
-		Token:    jwt.CreateToken(admin.ID, admin.Username),
+		Token:    jwt.CreateAdminAccessToken(admin.ID, admin.Username),
 	}, nil
 }
 
