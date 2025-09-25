@@ -1,12 +1,8 @@
-@startuml 
-
+@startuml
 skinparam linetype ortho
 skinparam shadowing false
-skinparam handwritten false
-skinparam nodesep 100
-skinparam ranksep 60
 
-entity "account" as account {
+entity "accounts" as accounts {
   *id: uint64 <<PK>>
   --
   username : varchar(64) <<UQ>>
@@ -31,18 +27,68 @@ entity "shop" as shop {
   updated_at: datetime
 }
 
-entity "product" as product {
+entity "brands" as brands {
+  *id: uint32 <<PK>>
+  --
+  name: varchar(100) <<UQ>>
+  logo_url: varchar(255) <<nullable>>
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "product_conditions" as product_conditions {
+  *id: uint8 <<PK>>
+  name: varchar(32)
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "product_categories" as product_categories {
+  *id: uint32 <<PK>>
+  name: varchar(128)
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "products" as products {
   *id: uint64 <<PK>>
   *shop_id: uint64 <<FK>>
+  *condition_id: uint8 <<FK>>
+  *category_id: uint32 <<FK>>
+  *brand_id: uint32 <<FK>> <<nullable>>
   --
   name: varchar(128)
   summary: varchar(255)
   description: text
   price: uint64
+  size: varchar(8)
   stock: uint32
   is_latest: bool
   created_at: datetime
   updated_at: datetime
+}
+
+entity "product_images" as product_images {
+  *id: uint64 <<PK>>
+  *product_id: uint64 <<FK>>
+  --
+  index: uint8
+  url: varchar(255)
+  created_at: datetime
+}
+
+entity "reviews" as reviews {
+  *id: uint64 <<PK>>
+  *product_id: uint64 <<FK>>
+  *account_id: uint64 <<FK>>
+  *order_id: uint64 <<FK>>
+  --
+  rating: uint8
+  comment: text <<nullable>>
+  created_at: datetime
+  updated_at: datetime
+  --
+  CONSTRAINT unique_review_per_order UNIQUE(order_id, product_id)
 }
 
 entity "cart" as cart {
@@ -59,35 +105,166 @@ entity "cart_item" as cart_item {
   *product_id: uint64 <<FK>>
   --
   quantity: uint32
+  created_at: datetime
+  updated_at: datetime
 }
 
 entity "wishlist" as wishlist {
-  *id: uint64<<PK>>
-  *account_id: uint64<<FK>>
-  *product_id: uint64<<FK>>
+  *id: uint64 <<PK>>
+  *account_id: uint64 <<FK>>
+  *product_id: uint64 <<FK>>
   --
-
+  created_at: datetime
+  updated_at: datetime
   --
-  CONSTRAINT
-  UNIQUE(account_id, product_id)
+  CONSTRAINT unique_wishlist UNIQUE(account_id, product_id)
 }
 
+entity "orders" as orders {
+  *id: uint64 <<PK>>
+  *account_id: uint64 <<FK>>
+  --
+  total_price: uint64
+  status: uint8
+  created_at: datetime
+  updated_at: datetime
+}
 
-product ||--o{wishlist
+entity "order_item" as order_item {
+  *id: uint64 <<PK>>
+  *order_id: uint64 <<FK>>
+  *product_id: uint64 <<FK>>
+  --
+  quantity: uint32
+  price_at_purchase: uint64
+  created_at: datetime
+}
 
-' --- RELASI ---
-' Satu Akun punya satu Toko (jika rolenya seller)
-account ||--|| shop
+entity "order_status_logs" as order_status_logs {
+  *id: uint64 <<PK>>
+  *order_id: uint64 <<FK>>
+  --
+  old_status: uint8
+  new_status: uint8
+  note: text <<nullable>>
+  created_by: uint64 <<nullable>>
+  created_at: datetime
+}
 
-' Satu Akun punya satu Keranjang
-account ||--|| cart
+entity "payments" as payments {
+  *id: uint64 <<PK>>
+  *order_id: uint64 <<FK, UQ>>
+  --
+  payment_status: varchar(32)
+  midtrans_order_id: varchar(64)
+  midtrans_transaction_id: varchar(64) <<nullable>>
+  payment_method: varchar(32) <<nullable>>
+  created_at: datetime
+  updated_at: datetime
+}
 
-' Satu Toko punya banyak Produk
-shop ||--o{ product
+entity "provinces" as provinces {
+  *id: varchar(10) <<PK>>
+  name: varchar(100)
+}
 
-' Satu Keranjang punya banyak Item
+entity "regencies" as regencies {
+  *id: varchar(10) <<PK>>
+  *province_id: varchar(10) <<FK>>
+  name: varchar(100)
+}
+
+entity "districts" as districts {
+  *id: varchar(10) <<PK>>
+  *regency_id: varchar(10) <<FK>>
+  name: varchar(100)
+}
+
+entity "addresses" as addresses {
+  *id: uint64 <<PK>>
+  *account_id: uint64 <<FK>>
+  *district_id: varchar(10) <<FK>>
+  *regency_id: varchar(10) <<FK>>
+  *province_id: varchar(10) <<FK>>
+  --
+  label: varchar(50)
+  recipient_name: varchar(100)
+  recipient_phone: varchar(20)
+  street: text
+  postal_code: varchar(10)
+  is_primary: bool
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "shipments" as shipments {
+  *id: uint64 <<PK>>
+  *order_id: uint64 <<FK, UQ>>
+  *address_id: uint64 <<FK>>
+  --
+  courier: varchar(10)
+  service: varchar(50)
+  shipping_cost: uint64
+  tracking_number: varchar(100) <<nullable>>
+  status: uint8
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "admin_logs" as admin_logs {
+  *id: uint64 <<PK>>
+  *admin_id: uint64 <<FK>>
+  --
+  action: varchar(100)
+  description: text <<nullable>>
+  ip_address: varchar(45)
+  created_at: datetime
+}
+
+' === RELASI YANG DITAMBAHKAN ===
+accounts ||--o{ reviews
+accounts ||--o{ admin_logs
+
+products ||--o{ reviews
+products }o--|| brands
+
+orders ||--o{ reviews
+orders ||--o{ order_status_logs
+
+brands ||--o{ products
+
+' === RELASI YANG SUDAH ADA ===
+accounts ||--|| shop
+accounts ||--|| cart
+accounts ||--o{ orders
+accounts ||--o{ wishlist
+accounts ||--o{ addresses
+
+shop ||--o{ products
+
+product_conditions ||--o{ products
+product_categories ||--o{ products
+
+products ||--o{ product_images
+products ||--o{ cart_item
+products ||--o{ wishlist
+products ||--o{ order_item
+
 cart ||--o{ cart_item
 
-' Satu Produk bisa ada di banyak Item Keranjang
-product ||--o{ cart_item
+orders ||--o{ order_item
+orders ||--|| payments
+orders ||--|| shipments
+
+payments }|--|| orders
+shipments }|--|| orders
+shipments }|--|| addresses
+
+addresses }|--|| districts
+addresses }|--|| regencies
+addresses }|--|| provinces
+
+districts ||--|| regencies
+regencies ||--|| provinces
+
 @enduml

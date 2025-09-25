@@ -1,180 +1,234 @@
--- =========================================
--- UP: Create all tables
--- =========================================
--- =====================
--- LOCATION / ADDRESS
--- =====================
-CREATE TABLE provinsis (
+-- CORE TABLES
+CREATE TABLE accounts (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+    username VARCHAR(64) UNIQUE NOT NULL,
+    password VARCHAR(60) NOT NULL,
+    email VARCHAR(64) UNIQUE,
+    avatar_url VARCHAR(255),
+    active BOOLEAN DEFAULT FALSE,
+    role SMALLINT NOT NULL CHECK (role >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE kabupaten_kotas (
-    id BIGSERIAL PRIMARY KEY,
-    provinsi_id BIGINT NOT NULL REFERENCES provinsis(id),
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+
+CREATE TABLE product_conditions (
+    id SMALLSERIAL PRIMARY KEY,
+    name VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE kecamatans (
-    id BIGSERIAL PRIMARY KEY,
-    kabupaten_kota_id BIGINT NOT NULL REFERENCES kabupaten_kotas(id),
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+
+CREATE TABLE product_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- =====================
--- USER DOMAIN
--- =====================
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    profile_picture VARCHAR(255),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
-);
-CREATE TABLE addresses (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id),
-    kecamatan_id BIGINT NOT NULL REFERENCES kecamatans(id),
-    label VARCHAR(50),
-    recipient_name VARCHAR(100),
-    phone_number VARCHAR(20),
-    full_address TEXT,
-    postal_code VARCHAR(10),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
-);
-CREATE TABLE carts (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT UNIQUE NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
-);
-CREATE TABLE cart_details (
-    cart_id BIGINT NOT NULL REFERENCES carts(id),
-    product_variant_id BIGINT NOT NULL,
-    quantity INT NOT NULL,
-    added_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (cart_id, product_variant_id)
-);
-CREATE TABLE wishlists (
-    user_id BIGINT NOT NULL REFERENCES users(id),
-    product_variant_id BIGINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, product_variant_id)
-);
--- =====================
--- PRODUCT DOMAIN
--- =====================
+
 CREATE TABLE brands (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    logo_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+
+-- GEOGRAPHY TABLES
+CREATE TABLE provinces (
+    id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
 );
+
+CREATE TABLE regencies (
+    id VARCHAR(10) PRIMARY KEY,
+    province_id VARCHAR(10) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    FOREIGN KEY (province_id) REFERENCES provinces(id)
+);
+
+CREATE TABLE districts (
+    id VARCHAR(10) PRIMARY KEY,
+    regency_id VARCHAR(10) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    FOREIGN KEY (regency_id) REFERENCES regencies(id)
+);
+
+-- SHOP & PRODUCTS
+CREATE TABLE shop (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT UNIQUE NOT NULL,
+    name VARCHAR(64) UNIQUE NOT NULL,
+    summary VARCHAR(255),
+    description TEXT,
+    active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
+
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
-    brand_id BIGINT NOT NULL REFERENCES brands(id),
-    base_name VARCHAR(255) NOT NULL,
-    base_description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+    shop_id BIGINT NOT NULL,
+    condition_id SMALLINT NOT NULL,
+    category_id INT NOT NULL,
+    brand_id INT,
+    name VARCHAR(128) NOT NULL,
+    summary VARCHAR(255),
+    description TEXT,
+    price BIGINT NOT NULL CHECK (price >= 0),
+    size VARCHAR(8),
+    stock INT NOT NULL CHECK (stock >= 0),
+    is_latest BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shop_id) REFERENCES shop(id),
+    FOREIGN KEY (condition_id) REFERENCES product_conditions(id),
+    FOREIGN KEY (category_id) REFERENCES product_categories(id),
+    FOREIGN KEY (brand_id) REFERENCES brands(id)
 );
-CREATE TABLE product_categories (
-    product_id BIGINT NOT NULL REFERENCES products(id),
-    category_id BIGINT NOT NULL REFERENCES categories(id),
-    PRIMARY KEY (product_id, category_id)
-);
-CREATE TABLE product_variants (
-    id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL REFERENCES products(id),
-    variant_name_extension VARCHAR(255),
-    price NUMERIC(12, 2),
-    stock_quantity INT
-);
+
 CREATE TABLE product_images (
     id BIGSERIAL PRIMARY KEY,
-    product_variant_id BIGINT NOT NULL REFERENCES product_variants(id),
-    image_url VARCHAR(255) NOT NULL,
-    alt_text VARCHAR(255),
-    display_order INT
+    product_id BIGINT NOT NULL,
+    image_index SMALLINT NOT NULL CHECK (image_index >= 0),
+    url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
-CREATE TABLE options (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
-);
-CREATE TABLE option_values (
-    id BIGSERIAL PRIMARY KEY,
-    option_id BIGINT NOT NULL REFERENCES options(id),
-    name VARCHAR(255) NOT NULL
-);
-CREATE TABLE variant_options (
-    product_variant_id BIGINT NOT NULL REFERENCES product_variants(id),
-    option_value_id BIGINT NOT NULL REFERENCES option_values(id),
-    PRIMARY KEY (product_variant_id, option_value_id)
-);
-CREATE TABLE reviews (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id),
-    product_id BIGINT NOT NULL REFERENCES products(id),
-    rating INT NOT NULL,
-    comment TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
--- =====================
--- ORDER DOMAIN
--- =====================
+
+-- ORDER & PAYMENT
 CREATE TABLE orders (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id),
-    shipping_address_id BIGINT NOT NULL REFERENCES addresses(id),
-    order_date TIMESTAMP NOT NULL DEFAULT NOW(),
-    current_status VARCHAR(50)
+    account_id BIGINT NOT NULL,
+    total_price BIGINT NOT NULL CHECK (total_price >= 0),
+    status SMALLINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
-CREATE TABLE order_line_items (
+
+CREATE TABLE order_items (
     id BIGSERIAL PRIMARY KEY,
-    order_id BIGINT NOT NULL REFERENCES orders(id),
-    product_variant_id BIGINT NOT NULL REFERENCES product_variants(id),
-    quantity INT NOT NULL,
-    price_at_transaction NUMERIC(12, 2)
+    order_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    price_at_purchase BIGINT NOT NULL CHECK (price_at_purchase >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
 );
-CREATE TABLE order_status_histories (
+
+CREATE TABLE order_status_logs (
     id BIGSERIAL PRIMARY KEY,
-    order_id BIGINT NOT NULL REFERENCES orders(id),
-    status VARCHAR(50),
-    notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    order_id BIGINT NOT NULL,
+    old_status SMALLINT,
+    new_status SMALLINT NOT NULL,
+    note TEXT,
+    created_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
 );
--- =====================
--- ADMIN DOMAIN
--- =====================
-CREATE TABLE admins (
+
+CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL
+    order_id BIGINT UNIQUE NOT NULL,
+    payment_status VARCHAR(32) NOT NULL,
+    midtrans_order_id VARCHAR(64) NOT NULL,
+    midtrans_transaction_id VARCHAR(64),
+    payment_method VARCHAR(32),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
 );
+
+-- USER FEATURES
+CREATE TABLE addresses (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT NOT NULL,
+    district_id VARCHAR(10) NOT NULL,
+    regency_id VARCHAR(10) NOT NULL,
+    province_id VARCHAR(10) NOT NULL,
+    label VARCHAR(50) NOT NULL,
+    recipient_name VARCHAR(100) NOT NULL,
+    recipient_phone VARCHAR(20) NOT NULL,
+    street TEXT NOT NULL,
+    postal_code VARCHAR(10) NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (district_id) REFERENCES districts(id),
+    FOREIGN KEY (regency_id) REFERENCES regencies(id),
+    FOREIGN KEY (province_id) REFERENCES provinces(id)
+);
+
+CREATE TABLE cart (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
+
+CREATE TABLE cart_items (
+    id BIGSERIAL PRIMARY KEY,
+    cart_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cart_id) REFERENCES cart(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE wishlist (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (account_id, product_id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- REVIEWS & LOGS
+CREATE TABLE reviews (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    account_id BIGINT NOT NULL,
+    order_id BIGINT NOT NULL,
+    rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (order_id, product_id),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+CREATE TABLE shipments (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT UNIQUE NOT NULL,
+    address_id BIGINT NOT NULL,
+    courier VARCHAR(10) NOT NULL,
+    service VARCHAR(50) NOT NULL,
+    shipping_cost BIGINT NOT NULL CHECK (shipping_cost >= 0),
+    tracking_number VARCHAR(100),
+    status SMALLINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (address_id) REFERENCES addresses(id)
+);
+
 CREATE TABLE admin_logs (
     id BIGSERIAL PRIMARY KEY,
-    admin_id BIGINT NOT NULL REFERENCES admins(id),
-    action TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+    admin_id BIGINT NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    description TEXT,
+    ip_address VARCHAR(45) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES accounts(id)
 );

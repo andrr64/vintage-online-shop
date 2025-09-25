@@ -1,26 +1,61 @@
 -- =========================================
--- DOWN: Drop all tables
+-- DOWN: Drop all tables in correct order (reverse of creation)
 -- =========================================
+
+-- Drop tables with foreign key dependencies first
 DROP TABLE IF EXISTS admin_logs;
-DROP TABLE IF EXISTS admins;
-DROP TABLE IF EXISTS order_status_histories;
-DROP TABLE IF EXISTS order_line_items;
-DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS shipments;
 DROP TABLE IF EXISTS reviews;
-DROP TABLE IF EXISTS variant_options;
-DROP TABLE IF EXISTS option_values;
-DROP TABLE IF EXISTS options;
-DROP TABLE IF EXISTS product_images;
-DROP TABLE IF EXISTS product_variants;
-DROP TABLE IF EXISTS product_categories;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS categories;
-DROP TABLE IF EXISTS brands;
-DROP TABLE IF EXISTS wishlists;
-DROP TABLE IF EXISTS cart_details;
-DROP TABLE IF EXISTS carts;
+DROP TABLE IF EXISTS wishlist;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS cart;
 DROP TABLE IF EXISTS addresses;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS kecamatans;
-DROP TABLE IF EXISTS kabupaten_kotas;
-DROP TABLE IF EXISTS provinsis;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_status_logs;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS product_images;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS shop;
+
+-- Drop reference tables
+DROP TABLE IF EXISTS districts;
+DROP TABLE IF EXISTS regencies;
+DROP TABLE IF EXISTS provinces;
+DROP TABLE IF EXISTS brands;
+DROP TABLE IF EXISTS product_categories;
+DROP TABLE IF EXISTS product_conditions;
+
+-- Drop core tables last
+DROP TABLE IF EXISTS accounts;
+
+-- =========================================
+-- ALTERNATIVE: Using SET FOREIGN_KEY_CHECKS (MySQL)
+-- =========================================
+/*
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS admin_logs;
+DROP TABLE IF EXISTS shipments;
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS wishlist;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS cart;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_status_logs;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS product_images;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS shop;
+DROP TABLE IF EXISTS districts;
+DROP TABLE IF EXISTS regencies;
+DROP TABLE IF EXISTS provinces;
+DROP TABLE IF EXISTS brands;
+DROP TABLE IF EXISTS product_categories;
+DROP TABLE IF EXISTS product_conditions;
+DROP TABLE IF EXISTS accounts;
+
+SET FOREIGN_KEY_CHECKS = 1;
+*/
