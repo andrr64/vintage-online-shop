@@ -4,6 +4,7 @@ import (
 	"log"
 	"vintage-server/config"
 	_ "vintage-server/docs"
+	"vintage-server/routes"
 	"vintage-server/shared"
 )
 
@@ -14,6 +15,14 @@ func main() {
 	// Connect to database
 	shared.ConnectDatabase()
 
-	log.Println("Project initialized successfully")
-	// Di sini nanti bisa start Gin server
+	// Setup routes
+	r := routes.SetupRouter()
+
+	// Jalankan server di port 8080 (atau dari env)
+	port := ":" + config.AppConfig.ServerPort // misal ambil dari env
+
+	log.Printf("Starting server at %s...\n", port)
+	if err := r.Run(port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

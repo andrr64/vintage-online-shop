@@ -16,6 +16,7 @@ type Config struct {
 	JWTSecret      string
 	JWTSecretAdmin string
 	DevKey         string
+	ServerPort     string
 }
 
 var AppConfig Config
@@ -37,6 +38,7 @@ func LoadConfig() {
 		JWTSecret:      os.Getenv("JWT_SECRET"),
 		JWTSecretAdmin: os.Getenv("JWT_SECRET_ADMIN"),
 		DevKey:         os.Getenv("DEV_KEY"),
+		ServerPort:     os.Getenv("SERVER_PORT"),
 	}
 
 	if AppConfig.DBHost == "" || AppConfig.DBUser == "" {
