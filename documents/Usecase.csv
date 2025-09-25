@@ -1,0 +1,31 @@
+Actor,Use Case,Domain,Deskripsi,Backend Domain
+User,Update Profile,Account,Edit nama- foto- email atau data profile lainnya,account
+User,Change Password / Authentication,Account,Update password- reset password- login/logout,account
+User,Add to Cart,Cart,Pilih produk dan simpan ke cart,cart
+User,Update Cart,Cart,Ubah quantity atau hapus item di cart,cart
+User,View Cart,Cart,Lihat isi cart dan total harga,cart
+User,Add to Wishlist,Wishlist,Simpan produk untuk dibeli nanti,wishlist
+User,Remove from Wishlist,Wishlist,Hapus produk dari wishlist,wishlist
+User,View Wishlist,Wishlist,Lihat semua wishlist item,wishlist
+User,Create Order / Checkout,Order,Proses checkout- pilih alamat- payment,order
+User,Cancel Order,Order,Cancel order jika status masih memungkinkan,order
+User,View Order History,Order,Lihat list order dan detail order,order
+User,Track Order,Order,Lihat status pengiriman dari shipping service,order
+User,Add Address,Address,Simpan alamat baru,address
+User,Update Address,Address,Edit alamat yang sudah ada,address
+User,Delete Address,Address,Hapus alamat,address
+User,Browse Products,Product,Search dan filter produk,product
+User,View Product Detail,Product,Lihat detail produk + review,product
+User,CRUD Review,Review,Buat review rating & komentar,review
+Admin,Login / Logout Admin,Admin,Login atau logout menggunakan session/token,admin
+Admin,Update Admin Profile,Admin,Ubah password- nama- atau email admin,admin
+Admin,Create / Update / Delete Product,Product,CRUD produk dan variant,product
+Admin,Manage Brands & Categories,Product,CRUD brand & kategori,product
+Admin,Manage Product Images & Options,Product,Upload foto- set variant options,product
+Admin,View Orders,Order,Lihat list semua order,order
+Admin,Update Order Status,Order,Proses order- kirim- selesai; tidak bisa cancel yang belum direquest user,order
+Admin,View Order Details,Order,Lihat detail per order,order
+Admin,View Order History / Status Logs,Order,Lihat histori order,order
+Admin,View / Suspend ,User,Kelola akun pelanggan,user
+Admin,View Logs,System,Lihat log admin,system
+Admin,Export Logs,System,Export log ke CSV/PDF,system
