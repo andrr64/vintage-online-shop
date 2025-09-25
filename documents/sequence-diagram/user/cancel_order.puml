@@ -1,0 +1,28 @@
+@startuml SD_CancelOrder
+
+actor User
+boundary UI
+control OrderController
+entity OrderDB
+boundary AdminNotification
+
+User -> UI : buka Order History
+User -> UI : pilih order dalam proses
+User -> UI : klik "Batalkan Order"
+UI -> OrderController : request cancel order
+OrderController -> OrderDB : cek status order
+OrderDB --> OrderController : status order
+
+alt Masih bisa dibatalkan
+    OrderController -> OrderDB : update status = "Request Cancel"
+    OrderDB --> OrderController : hasil update
+    OrderController -> AdminNotification : kirim notifikasi cancel request
+    AdminNotification --> OrderController : konfirmasi notifikasi
+    OrderController --> UI : sukses cancel request
+    UI --> User : tampilkan pesan sukses
+else Tidak bisa dibatalkan
+    OrderController --> UI : error (sudah dikirim / tidak bisa cancel)
+    UI --> User : tampilkan pesan error
+end
+
+@enduml

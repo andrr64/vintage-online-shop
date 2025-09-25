@@ -1,0 +1,29 @@
+@startuml SD_WishlistCart
+
+actor User
+boundary UI
+control WishlistController
+control CartController
+entity WishlistDB
+entity CartDB
+
+User -> UI : pilih produk
+
+alt Tambah ke Wishlist
+    User -> UI : klik "Add to Wishlist"
+    UI -> WishlistController : request tambah wishlist
+    WishlistController -> WishlistDB : simpan data produk
+    WishlistDB --> WishlistController : sukses
+    WishlistController --> UI : notifikasi sukses
+    UI --> User : tampilkan notifikasi
+else Tambah ke Cart
+    User -> UI : klik "Add to Cart"
+    User -> UI : pilih jumlah produk
+    UI -> CartController : request tambah cart
+    CartController -> CartDB : simpan data produk+qty
+    CartDB --> CartController : sukses
+    CartController --> UI : notifikasi sukses
+    UI --> User : tampilkan notifikasi
+end
+
+@enduml

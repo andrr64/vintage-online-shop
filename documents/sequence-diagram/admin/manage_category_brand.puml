@@ -1,0 +1,71 @@
+@startuml SD_AdminCatalog
+
+actor Admin
+boundary UI
+control BrandController
+control CategoryController
+entity BrandDB
+entity CategoryDB
+
+Admin -> UI : buka menu Brand & Kategori
+UI -> BrandController : request daftar brand
+BrandController -> BrandDB : ambil semua brand
+BrandDB --> BrandController : daftar brand
+BrandController --> UI : kirim daftar brand
+
+UI -> CategoryController : request daftar kategori
+CategoryController -> CategoryDB : ambil semua kategori
+CategoryDB --> CategoryController : daftar kategori
+CategoryController --> UI : kirim daftar kategori
+
+UI --> Admin : tampilkan daftar brand & kategori
+
+Admin -> UI : pilih aksi Brand (Tambah/Edit/Hapus)
+UI -> BrandController : kirim aksi Brand
+
+alt Tambah Brand
+    BrandController -> UI : tampilkan form tambah brand
+    UI -> BrandController : kirim data brand baru
+    BrandController -> BrandDB : simpan brand baru
+    BrandDB --> BrandController : konfirmasi simpan
+    BrandController --> UI : notifikasi sukses
+else Edit Brand
+    BrandController -> UI : tampilkan form edit brand
+    UI -> BrandController : kirim data update
+    BrandController -> BrandDB : update brand
+    BrandDB --> BrandController : konfirmasi update
+    BrandController --> UI : notifikasi sukses
+else Hapus Brand
+    BrandController -> BrandDB : hapus brand
+    BrandDB --> BrandController : konfirmasi hapus
+    BrandController --> UI : notifikasi sukses
+else Tidak ada aksi
+    BrandController --> UI : tidak ada aksi dilakukan
+end
+
+Admin -> UI : pilih aksi Kategori (Tambah/Edit/Hapus)
+UI -> CategoryController : kirim aksi Kategori
+
+alt Tambah Kategori
+    CategoryController -> UI : tampilkan form tambah kategori
+    UI -> CategoryController : kirim data kategori baru
+    CategoryController -> CategoryDB : simpan kategori baru
+    CategoryDB --> CategoryController : konfirmasi simpan
+    CategoryController --> UI : notifikasi sukses
+else Edit Kategori
+    CategoryController -> UI : tampilkan form edit kategori
+    UI -> CategoryController : kirim data update
+    CategoryController -> CategoryDB : update kategori
+    CategoryDB --> CategoryController : konfirmasi update
+    CategoryController --> UI : notifikasi sukses
+else Hapus Kategori
+    CategoryController -> CategoryDB : hapus kategori
+    CategoryDB --> CategoryController : konfirmasi hapus
+    CategoryController --> UI : notifikasi sukses
+else Tidak ada aksi
+    CategoryController --> UI : tidak ada aksi dilakukan
+end
+
+UI --> Admin : tampilkan notifikasi sukses/gagal
+
+@enduml

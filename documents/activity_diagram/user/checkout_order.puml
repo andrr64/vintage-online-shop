@@ -1,0 +1,20 @@
+@startuml UC_CheckoutOrder
+
+start
+:User buka Cart;
+:User pilih produk yang mau checkout;
+:User pilih alamat pengiriman;
+:User pilih metode pembayaran;
+:Sistem hitung total harga + ongkir;
+:User konfirmasi checkout;
+:Proses pembayaran via Payment Gateway;
+if (Pembayaran sukses?) then (Yes)
+    :Buat order baru di database;
+    :Kirim permintaan pengiriman ke Shipping Service;
+    :Tampilkan halaman sukses (order confirmed);
+else (No)
+    :Tampilkan error pembayaran;
+endif
+stop
+
+@enduml

@@ -1,0 +1,22 @@
+@startuml SD_AdminViewLogs
+
+actor Admin
+boundary UI
+control AdminController
+entity AdminLogDB
+
+Admin -> UI : buka menu Logs
+UI -> AdminController : request daftar log
+AdminController -> AdminLogDB : ambil data log
+AdminLogDB --> AdminController : hasil log
+AdminController --> UI : kirim data log
+UI --> Admin : tampilkan log
+
+Admin -> UI : pilih ekspor log (CSV/PDF)
+UI -> AdminController : request ekspor
+AdminController -> AdminLogDB : ambil data log untuk ekspor
+AdminLogDB --> AdminController : hasil data
+AdminController --> UI : file CSV/PDF
+UI --> Admin : download file
+
+@enduml

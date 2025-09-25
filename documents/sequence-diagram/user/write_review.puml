@@ -1,0 +1,17 @@
+@startuml SD_WriteReview
+
+actor User
+boundary UI
+control ReviewController
+entity ReviewDB
+
+User -> UI : buka halaman produk
+User -> UI : klik "Tulis Review"
+User -> UI : isi form review (rating + komentar)
+UI -> ReviewController : kirim data review
+ReviewController -> ReviewDB : simpan review
+ReviewDB --> ReviewController : sukses
+ReviewController --> UI : pesan sukses
+UI --> User : tampilkan notifikasi berhasil
+
+@enduml

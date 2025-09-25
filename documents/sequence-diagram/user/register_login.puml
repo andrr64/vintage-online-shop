@@ -1,0 +1,39 @@
+@startuml SD_RegisterLogin
+
+actor User
+boundary UI
+control AuthController
+entity UserDB
+
+== Register/Login Flow ==
+
+User -> UI : buka aplikasi
+User -> UI : isi form (email/username + password)
+
+alt Register
+    UI -> AuthController : request register
+    AuthController -> UserDB : cek email unik
+    UserDB --> AuthController : hasil cek
+    alt Data valid
+        AuthController -> UserDB : simpan user baru
+        UserDB --> AuthController : sukses
+        AuthController --> UI : pesan sukses
+        UI --> User : tampilkan notifikasi sukses
+    else Data tidak valid
+        AuthController --> UI : error (email sudah terdaftar / password invalid)
+        UI --> User : tampilkan error
+    end
+else Login
+    UI -> AuthController : request login
+    AuthController -> UserDB : cek user & password
+    UserDB --> AuthController : hasil cek
+    alt Data cocok
+        AuthController --> UI : session/token login
+        UI --> User : tampilkan dashboard
+    else Data salah
+        AuthController --> UI : error login
+        UI --> User : tampilkan error
+    end
+end
+
+@enduml

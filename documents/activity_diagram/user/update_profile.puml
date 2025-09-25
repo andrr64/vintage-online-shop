@@ -1,0 +1,16 @@
+@startuml UC_UpdateProfile
+
+start
+:User buka halaman Profile;
+:User edit data profile (nama, kontak, dll);
+:Kirim form update;
+:Validasi data;
+if (Valid?) then (Yes)
+    :Update data user di database;
+    :Tampilkan notifikasi sukses;
+else (No)
+    :Tampilkan pesan error;
+endif
+stop
+
+@enduml

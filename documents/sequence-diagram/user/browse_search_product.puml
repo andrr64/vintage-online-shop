@@ -1,0 +1,16 @@
+@startuml SD_BrowseSearchProducts
+
+actor User
+boundary UI
+control ProductController
+entity ProductDB
+
+User -> UI : buka halaman produk
+User -> UI : masukkan kata kunci / filter kategori
+UI -> ProductController : request pencarian produk
+ProductController -> ProductDB : ambil produk sesuai filter
+ProductDB --> ProductController : daftar produk
+ProductController --> UI : kirim daftar produk
+UI --> User : tampilkan daftar produk
+
+@enduml

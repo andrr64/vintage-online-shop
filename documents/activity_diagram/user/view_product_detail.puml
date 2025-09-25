@@ -1,0 +1,10 @@
+@startuml UC_ViewProductDetail
+
+start
+:User pilih produk dari daftar;
+:Sistem ambil detail produk dari database;
+:Menampilkan informasi produk (gambar, harga, stok, deskripsi);
+:User bisa lihat review & rating;
+stop
+
+@enduml

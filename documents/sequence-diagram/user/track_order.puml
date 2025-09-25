@@ -1,0 +1,19 @@
+@startuml SD_TrackOrder
+
+actor User
+boundary UI
+control OrderController
+entity OrderDB
+participant "Shipping Service" as ShippingService
+
+User -> UI : buka menu Order History
+User -> UI : pilih order untuk dilacak
+UI -> OrderController : request status order
+OrderController -> OrderDB : ambil status order
+OrderDB --> OrderController : hasil status
+OrderController -> ShippingService : request tracking data
+ShippingService --> OrderController : hasil tracking
+OrderController --> UI : status + data tracking
+UI --> User : tampilkan informasi tracking
+
+@enduml

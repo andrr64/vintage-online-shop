@@ -1,0 +1,31 @@
+@startuml SD_AdminLogin
+
+actor Admin
+boundary UI
+control AuthController
+entity AdminDB
+
+Admin -> UI : buka halaman login
+UI -> Admin : tampilkan form login
+
+Admin -> UI : masukkan username & password
+UI -> AuthController : kirim kredensial
+AuthController -> AdminDB : cek username & password
+AdminDB --> AuthController : hasil validasi
+
+alt Kredensial valid
+    AuthController -> AuthController : buat session/token
+    AuthController --> UI : akses dashboard admin
+    UI --> Admin : tampilkan dashboard
+else Kredensial tidak valid
+    AuthController --> UI : tampilkan error login
+    UI --> Admin : error login
+end
+
+Admin -> UI : pilih logout
+UI -> AuthController : request logout
+AuthController -> AuthController : hapus session/token
+AuthController --> UI : kembali ke halaman login
+UI --> Admin : tampilkan halaman login
+
+@enduml

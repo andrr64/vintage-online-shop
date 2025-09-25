@@ -1,0 +1,18 @@
+@startuml SD_ViewProductDetail
+
+actor User
+boundary UI
+control ProductController
+entity ProductDB
+entity ReviewDB
+
+User -> UI : pilih produk dari daftar
+UI -> ProductController : request detail produk
+ProductController -> ProductDB : query detail produk
+ProductDB --> ProductController : hasil detail produk
+ProductController -> ReviewDB : query review & rating
+ReviewDB --> ProductController : hasil review & rating
+ProductController --> UI : kirim detail produk + review
+UI --> User : tampilkan detail (gambar, harga, stok, deskripsi, review)
+
+@enduml

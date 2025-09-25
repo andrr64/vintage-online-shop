@@ -1,0 +1,84 @@
+@startuml
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+left to right direction
+
+actor "User" as user
+actor "Admin" as admin
+actor "Payment Gateway" as payment
+actor "Shipping Service" as shipping
+
+' =====================
+' USER DOMAIN
+' =====================
+rectangle "User Domain" {
+    usecase "Register / Login" as UC_Auth
+    usecase "Update Profile" as UC_Profile
+    usecase "Manage Address" as UC_Address
+    usecase "Wishlist & Cart" as UC_WishlistCart
+}
+
+' =====================
+' PRODUCT DOMAIN
+' =====================
+rectangle "Product Domain" {
+    usecase "Browse & Search Products" as UC_Browse
+    usecase "View Product Detail" as UC_ViewDetail
+    usecase "Write Review" as UC_Review
+
+    usecase "Manage Products" as UC_AdminProduct
+    usecase "Manage Categories & Brands" as UC_AdminCatalog
+    usecase "Moderate Reviews" as UC_AdminReview
+}
+
+' =====================
+' ORDER DOMAIN
+' =====================
+rectangle "Order Domain" {
+    usecase "Checkout Order" as UC_Checkout
+    usecase "Track Order" as UC_Track
+    usecase "Order History" as UC_OrderHistory
+    usecase "Cancel Order (Request)" as UC_Cancel
+
+    usecase "Manage Orders" as UC_AdminOrder
+}
+
+' =====================
+' ADMIN DOMAIN
+' =====================
+rectangle "Admin Domain" {
+    usecase "Admin Login/Logout" as UC_AdminLogin
+    usecase "Manage Users" as UC_AdminUser
+    usecase "View Admin Logs" as UC_AdminLog
+}
+
+' =====================
+' RELATIONSHIPS
+' =====================
+user --> UC_Auth
+user --> UC_Profile
+user --> UC_Address
+user --> UC_WishlistCart
+
+user --> UC_Browse
+user --> UC_ViewDetail
+user --> UC_Review
+
+user --> UC_Checkout
+user --> UC_Track
+user --> UC_OrderHistory
+user --> UC_Cancel
+
+admin --> UC_AdminLogin
+admin --> UC_AdminProduct
+admin --> UC_AdminCatalog
+admin --> UC_AdminOrder
+admin --> UC_AdminUser
+admin --> UC_AdminReview
+admin --> UC_AdminLog
+
+UC_Checkout --> payment : "process payment"
+UC_Checkout --> shipping : "request shipping"
+
+@enduml

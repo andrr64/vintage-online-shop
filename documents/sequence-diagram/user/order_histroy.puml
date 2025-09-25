@@ -1,0 +1,22 @@
+@startuml SD_OrderHistory
+
+actor User
+boundary UI
+control OrderController
+entity OrderDB
+
+User -> UI : buka menu Order History
+UI -> OrderController : request riwayat order
+OrderController -> OrderDB : ambil semua riwayat order (by userId)
+OrderDB --> OrderController : daftar order
+OrderController --> UI : kirim daftar order
+UI --> User : tampilkan riwayat order (status, tanggal, total harga)
+
+User -> UI : klik salah satu order
+UI -> OrderController : request detail order
+OrderController -> OrderDB : ambil detail order
+OrderDB --> OrderController : detail order
+OrderController --> UI : kirim detail order
+UI --> User : tampilkan detail order
+
+@enduml

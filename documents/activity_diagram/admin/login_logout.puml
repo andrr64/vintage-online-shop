@@ -1,0 +1,19 @@
+@startuml UC_AdminLogin
+
+start
+:Admin buka halaman login;
+:Masukkan username & password;
+:Validasi kredensial;
+if (Valid?) then (Yes)
+    :Sistem buat session/token;
+    :Akses dashboard admin;
+else (No)
+    :Tampilkan error login;
+endif
+
+:Admin pilih Logout;
+:Sistem hapus session/token;
+:Kembali ke halaman login;
+stop
+
+@enduml

@@ -1,0 +1,17 @@
+@startuml UC_CancelOrder
+
+start
+:User buka Order History;
+:User pilih order yang masih dalam proses;
+:Klik tombol "Batalkan Order";
+:Sistem cek status order;
+if (Masih bisa dibatalkan?) then (Yes)
+    :Update status order jadi "Request Cancel";
+    :Notifikasi ke admin/bengkel;
+    :Tampilkan pesan sukses ke user;
+else (No)
+    :Tampilkan pesan error (sudah dikirim/tidak bisa dibatalkan);
+endif
+stop
+
+@enduml

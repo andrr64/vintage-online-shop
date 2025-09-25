@@ -1,39 +1,29 @@
 @startuml
 
+skinparam linetype ortho
+skinparam shadowing false
+skinparam handwritten false
+skinparam nodesep 100
+skinparam ranksep 60
+
+' ==========================================================
+' ==                     CORE ENTITIES                    ==
+' ==========================================================
+
 entity "User" as user {
   *user_id : int <<PK>>
   --
   username : varchar
-  password : varchar
+  password_hash : varchar
   email : varchar
-  profile_picture : varchar
+  profile_picture_url : varchar
 }
 
 entity "Admin" as admin {
   *admin_id : int <<PK>>
   --
   username : varchar
-  password : varchar
-}
-
-entity "Transaction" as transaction {
-  *transaction_id : int <<PK>>
-  user_id : int <<FK>>
-  --
-  total_amount : decimal
-  total_quantity : int
-  status : varchar
-  created_at : datetime
-  updated_at : datetime
-}
-
-entity "Transaction_Detail" as transaction_detail {
-  *detail_id : int <<PK>>
-  transaction_id : int <<FK>>
-  version_id : int <<FK>>
-  --
-  quantity : int
-  total : decimal
+  password_hash : varchar
 }
 
 entity "Admin_Log" as admin_log {
@@ -44,32 +34,57 @@ entity "Admin_Log" as admin_log {
   timestamp : datetime
 }
 
+' ==========================================================
+' ==           PRODUCT CATALOG (THRIFTING MODEL)          ==
+' ==========================================================
+
+' Product: The core concept of an item, shared across all variants.
 entity "Product" as product {
   *product_id : int <<PK>>
-  --
-  product_name : varchar
   brand_id : int <<FK>>
-  category_id : int <<FK>>
+  --
+  base_name : varchar
+  base_description : text
 }
 
-entity "Product_Version" as product_version {
-  *version_id : int <<PK>>
+' Product_Variant: Represents a unique, sellable thrifted item.
+entity "Product_Variant" as product_variant {
+  *variant_id : int <<PK>>
   product_id : int <<FK>>
-  previous_version_id : int <<FK, nullable>>
   --
-  size : varchar
-  color : varchar
-  description : text
+  variant_name_extension: varchar ' e.g., "Kondisi Baik, Ukuran L"
   price : decimal
-  stock : int
-  active_from : datetime
-  active_to : datetime <<nullable>>
+  stock_quantity : int ' Typically 1 for thrifted items
 }
 
-entity "Category" as category {
-  *category_id : int <<PK>>
+' Product_Images: Images are linked to a specific unique variant/item.
+entity "Product_Images" as product_images {
+  *image_id : int <<PK>>
+  variant_id : int <<FK>>
   --
-  category_name : varchar
+  image_url : varchar
+  alt_text : varchar <<nullable>>
+  display_order: int
+}
+
+' Flexible Option system to describe item specifics (e.g., condition, size).
+entity "Option" as option {
+  *option_id : int <<PK>>
+  --
+  option_name : varchar ' e.g., "Kondisi", "Ukuran", "Bahan"
+}
+
+entity "Option_Value" as option_value {
+  *value_id : int <<PK>>
+  option_id : int <<FK>>
+  --
+  value_name : varchar ' e.g., "Sangat Baik", "Large", "Katun"
+}
+
+' Junction table to link a variant to its specific descriptive options.
+entity "Variant_Option" as variant_option {
+  *variant_id : int <<PK, FK>>
+  *value_id : int <<PK, FK>>
 }
 
 entity "Brand" as brand {
@@ -78,54 +93,163 @@ entity "Brand" as brand {
   brand_name : varchar
 }
 
-entity "Address" as address {
-  *address_id : int <<PK>>
-  user_id : int <<FK>>
+entity "Category" as category {
+  *category_id : int <<PK>>
   --
-  full_address : text
-  sub_district : int
-  district : int
-  city : int
-  province : int
-  postal_code : varchar
+  category_name : varchar
 }
+
+entity "Product_Category" as product_category {
+  *product_id : int <<PK, FK>>
+  *category_id : int <<PK, FK>>
+}
+
+' NEW: Table for user reviews and ratings.
+entity "Review" as review {
+  *review_id : int <<PK>>
+  user_id : int <<FK>>
+  product_id : int <<FK>>
+  --
+  rating: int ' e.g., 1 to 5
+  comment: text <<nullable>>
+  created_at: datetime
+}
+
+
+' ==========================================================
+' ==                 ORDER MANAGEMENT                     ==
+' ==========================================================
+
+entity "Order" as order {
+  *order_id : int <<PK>>
+  user_id : int <<FK>>
+  shipping_address_id : int <<FK>>
+  --
+  order_date : datetime
+  current_status : varchar
+}
+
+entity "Order_Line_Item" as order_line_item {
+  *line_item_id : int <<PK>>
+  order_id : int <<FK>>
+  variant_id : int <<FK>>
+  --
+  quantity : int
+  price_at_transaction : decimal
+}
+
+entity "Order_Status_History" as order_status_history {
+  *history_id : int <<PK>>
+  order_id : int <<FK>>
+  --
+  status : varchar
+  notes : text <<nullable>>
+  created_at : datetime
+}
+
+
+' ==========================================================
+' ==                USER ACTIVITY & ADDRESS               ==
+' ==========================================================
 
 entity "Cart" as cart {
   *cart_id : int <<PK>>
-  user_id : int <<FK>>
+  user_id : int <<FK, UQ>>
+  --
   created_at : datetime
 }
 
 entity "Cart_Detail" as cart_detail {
-  *cart_id : int <<FK>>
-  *version_id : int <<FK>>
+  *cart_id : int <<PK, FK>>
+  *variant_id : int <<PK, FK>>
+  --
   quantity : int
+  added_at : datetime
 }
 
 entity "Wishlist" as wishlist {
-  *wishlist_id : int <<PK>>
-  user_id : int <<FK>>
-  version_id : int <<FK>>
+  *user_id : int <<PK, FK>>
+  *variant_id : int <<PK, FK>>
+  --
   created_at : datetime
 }
 
-' =========================
-' Relationships
-' =========================
-user ||--o{ address             : has
-product }o--|| category
-product }o--|| brand
+entity "Address" as address {
+  *address_id : int <<PK>>
+  user_id : int <<FK>>
+  kecamatan_id : int <<FK>>
+  --
+  label: varchar(50)
+  recipient_name: varchar(100)
+  phone_number: varchar(20)
+  full_address : text
+  postal_code : varchar(10)
+}
+
+entity "Kecamatan" as kecamatan {
+  *kecamatan_id : int <<PK>>
+  kabupaten_kota_id : int <<FK>>
+  --
+  kecamatan_name: varchar
+}
+
+entity "Kabupaten_Kota" as kabupaten_kota {
+  *kabupaten_kota_id : int <<PK>>
+  provinsi_id : int <<FK>>
+  --
+  kabupaten_kota_name: varchar
+}
+
+entity "Provinsi" as provinsi {
+  *provinsi_id : int <<PK>>
+  --
+  provinsi_name: varchar
+}
+
+
+' ==========================================================
+' ==                      RELATIONSHIPS                     ==
+' ==========================================================
+
+' Admin
 admin_log }o--|| admin
-cart }o--|| user
-cart_detail }o--|| cart
-cart_detail }o--|| product_version
-wishlist }o--|| user
-wishlist }o--|| product_version
-transaction }o--|| user
-transaction_detail }o--|| transaction
-transaction_detail }o--|| product_version
-product ||--o{ product_version
-product_version }o--|| product
-product_version }o--|| product_version : previous
+
+' Product Catalog
+product }o--|| brand
+product ||--o{ product_variant
+product_variant ||--o{ product_images
+product }o--o{ product_category
+category }o--o{ product_category
+
+' Product Options
+product_variant }o--o{ variant_option
+option_value }o--o{ variant_option
+option ||--o{ option_value
+
+' Reviews
+user ||--o{ review
+product ||--o{ review
+
+' Order Management
+user ||--o{ order
+order }o--|| address : "ships to"
+order ||--o{ order_line_item
+order ||--o{ order_status_history
+order_line_item }o--|| product_variant
+
+' User Activity
+user ||--|| cart
+cart ||--o{ cart_detail
+cart_detail }o--|| product_variant
+
+user }o--o{ wishlist
+wishlist }o--|| product_variant
+
+' Address Hierarchy
+user ||--o{ address
+address }o--|| kecamatan
+provinsi ||--o{ kabupaten_kota
+kabupaten_kota ||--o{ kecamatan
 
 @enduml
+

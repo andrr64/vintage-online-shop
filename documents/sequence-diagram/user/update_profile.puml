@@ -1,0 +1,24 @@
+@startuml SD_UpdateProfile
+
+actor User
+boundary UI
+control UserController
+entity UserDB
+
+User -> UI : buka halaman Profile
+User -> UI : edit data profile
+User -> UI : klik "Update"
+UI -> UserController : kirim form update
+UserController -> UserController : validasi data
+
+alt Data valid
+    UserController -> UserDB : update data user
+    UserDB --> UserController : sukses
+    UserController --> UI : notifikasi sukses
+    UI --> User : tampilkan pesan sukses
+else Data tidak valid
+    UserController --> UI : pesan error
+    UI --> User : tampilkan pesan error
+end
+
+@enduml

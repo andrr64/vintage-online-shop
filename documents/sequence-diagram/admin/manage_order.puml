@@ -1,0 +1,34 @@
+@startuml SD_AdminManageOrders
+
+actor Admin
+boundary UI
+control OrderController
+entity OrderDB
+
+Admin -> UI : buka menu Order
+UI -> OrderController : request daftar order
+OrderController -> OrderDB : ambil semua order
+OrderDB --> OrderController : daftar order
+OrderController --> UI : kirim daftar order
+UI --> Admin : tampilkan daftar order
+
+Admin -> UI : pilih order tertentu
+UI -> OrderController : request detail & cek status
+
+alt User request cancel
+    UI -> OrderController : setujui / tolak pembatalan
+    OrderController -> OrderDB : update status order
+    OrderDB --> OrderController : konfirmasi update
+    OrderController --> UI : notifikasi sukses
+else Update status pengiriman
+    UI -> OrderController : kirim status baru (Diproses, Dikirim, Selesai)
+    OrderController -> OrderDB : update status order
+    OrderDB --> OrderController : konfirmasi update
+    OrderController --> UI : notifikasi sukses
+else Tidak ada aksi
+    OrderController --> UI : tidak ada aksi dilakukan
+end
+
+UI --> Admin : tampilkan notifikasi sukses/gagal
+
+@enduml

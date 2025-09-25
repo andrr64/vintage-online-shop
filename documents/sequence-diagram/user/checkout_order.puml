@@ -1,0 +1,38 @@
+@startuml SD_CheckoutOrder
+
+actor User
+boundary UI
+control OrderController
+entity CartDB
+entity OrderDB
+participant "Payment Gateway" as PaymentGateway
+participant "Shipping Service" as ShippingService
+
+User -> UI : buka Cart
+UI -> CartDB : ambil data cart
+CartDB --> UI : daftar produk
+
+User -> UI : pilih produk untuk checkout
+User -> UI : pilih alamat pengiriman
+User -> UI : pilih metode pembayaran
+UI -> OrderController : request hitung total harga + ongkir
+OrderController --> UI : total harga + ongkir
+
+User -> UI : konfirmasi checkout
+UI -> OrderController : proses checkout
+OrderController -> PaymentGateway : proses pembayaran
+PaymentGateway --> OrderController : hasil pembayaran
+
+alt Pembayaran sukses
+    OrderController -> OrderDB : simpan order baru
+    OrderDB --> OrderController : order id
+    OrderController -> ShippingService : request pengiriman
+    ShippingService --> OrderController : konfirmasi
+    OrderController --> UI : checkout sukses + detail order
+    UI --> User : tampilkan halaman sukses
+else Pembayaran gagal
+    OrderController --> UI : error pembayaran
+    UI --> User : tampilkan error
+end
+
+@enduml

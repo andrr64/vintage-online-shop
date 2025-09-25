@@ -1,0 +1,10 @@
+@startuml UC_AdminViewLogs
+
+start
+:Admin buka menu Logs;
+:Sistem ambil daftar aktivitas admin dari database;
+:Tampilkan log berdasarkan filter (tanggal, admin tertentu, dsb);
+:Admin bisa ekspor log ke CSV/PDF;
+stop
+
+@enduml

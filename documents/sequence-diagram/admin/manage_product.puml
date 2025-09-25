@@ -1,0 +1,38 @@
+@startuml SD_AdminManageProducts
+
+actor Admin
+boundary UI
+control ProductController
+entity ProductDB
+
+Admin -> UI : buka menu Manajemen Produk
+UI -> ProductController : request daftar produk
+ProductController -> ProductDB : ambil semua produk
+ProductDB --> ProductController : daftar produk
+ProductController --> UI : kirim daftar produk
+UI --> Admin : tampilkan daftar produk
+
+Admin -> UI : pilih aksi (Tambah / Edit / Hapus)
+
+alt Tambah Produk
+    UI -> ProductController : kirim data produk baru
+    ProductController -> ProductDB : simpan produk baru
+    ProductDB --> ProductController : konfirmasi tersimpan
+    ProductController --> UI : notifikasi sukses
+else Edit Produk
+    UI -> ProductController : pilih produk & kirim data update
+    ProductController -> ProductDB : update produk
+    ProductDB --> ProductController : konfirmasi update
+    ProductController --> UI : notifikasi sukses
+else Hapus Produk
+    UI -> ProductController : pilih produk & konfirmasi hapus
+    ProductController -> ProductDB : hapus produk
+    ProductDB --> ProductController : konfirmasi hapus
+    ProductController --> UI : notifikasi sukses
+else Tidak ada aksi
+    ProductController --> UI : tidak ada aksi dilakukan
+end
+
+UI --> Admin : tampilkan notifikasi sukses/gagal
+
+@enduml
