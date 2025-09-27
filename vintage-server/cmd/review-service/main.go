@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	log.Printf("Service product sedang berjalan...\n")
+	log.Printf("Service review sedang berjalan...\n")
 	// TODO: Inisialisasi server, dependency injection, dll.
 }
