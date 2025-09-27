@@ -1,10 +1,14 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // Order merepresentasikan tabel 'orders'
 type Order struct {
-	ID         int64     `json:"id" db:"id"`
+	ID         uuid.UUID `json:"id" db:"id"`
 	AccountID  int64     `json:"account_id" db:"account_id"`
 	TotalPrice int64     `json:"total_price" db:"total_price"`
 	Status     int16     `json:"status" db:"status"`
@@ -35,7 +39,7 @@ type OrderStatusLog struct {
 
 // Payment merepresentasikan tabel 'payments'
 type Payment struct {
-	ID                    int64     `json:"id" db:"id"`
+	ID                    uuid.UUID `json:"id" db:"id"`
 	OrderID               int64     `json:"order_id" db:"order_id"`
 	PaymentStatus         string    `json:"payment_status" db:"payment_status"`
 	MidtransOrderID       string    `json:"midtrans_order_id" db:"midtrans_order_id"`
@@ -47,7 +51,7 @@ type Payment struct {
 
 // Shipment merepresentasikan tabel 'shipments'
 type Shipment struct {
-	ID             int64     `json:"id" db:"id"`
+	ID             uuid.UUID `json:"id" db:"id"`
 	OrderID        int64     `json:"order_id" db:"order_id"`
 	AddressID      int64     `json:"address_id" db:"address_id"`
 	Courier        string    `json:"courier" db:"courier"`
@@ -61,7 +65,7 @@ type Shipment struct {
 
 // Cart merepresentasikan tabel 'cart'
 type Cart struct {
-	ID        int64     `json:"id" db:"id"`
+	ID        uuid.UUID `json:"id" db:"id"`
 	AccountID int64     `json:"account_id" db:"account_id"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`

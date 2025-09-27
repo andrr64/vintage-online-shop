@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // ProductCondition merepresentasikan tabel 'product_conditions'
 type ProductCondition struct {
@@ -35,7 +39,7 @@ type ProductSize struct {
 
 // Shop merepresentasikan tabel 'shop'
 type Shop struct {
-	ID          int64     `json:"id" db:"id"`
+	ID          uuid.UUID `json:"id" db:"id"`
 	AccountID   int64     `json:"account_id" db:"account_id"`
 	Name        string    `json:"name" db:"name"`
 	Summary     *string   `json:"summary" db:"summary"`
@@ -47,7 +51,7 @@ type Shop struct {
 
 // Product merepresentasikan tabel 'products'
 type Product struct {
-	ID          int64     `json:"id" db:"id"`
+	ID          uuid.UUID `json:"id" db:"id"`
 	ShopID      int64     `json:"shop_id" db:"shop_id"`
 	ConditionID int16     `json:"condition_id" db:"condition_id"`
 	CategoryID  int       `json:"category_id" db:"category_id"`
@@ -74,7 +78,7 @@ type ProductImage struct {
 
 // Review merepresentasikan tabel 'reviews'
 type Review struct {
-	ID        int64     `json:"id" db:"id"`
+	ID        uuid.UUID `json:"id" db:"id"`
 	ProductID int64     `json:"product_id" db:"product_id"`
 	AccountID int64     `json:"account_id" db:"account_id"`
 	OrderID   int64     `json:"order_id" db:"order_id"`

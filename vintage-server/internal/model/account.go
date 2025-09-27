@@ -1,13 +1,23 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+const (
+	RoleCustomer = iota + 1
+	RoleSeller
+	RoleAdmin
+)
 
 // Account merepresentasikan tabel 'accounts'
 type Account struct {
-	ID        int64     `json:"id" db:"id"`
+	ID        uuid.UUID `json:"id" db:"id"`
 	Username  string    `json:"username" db:"username"`
 	Password  string    `json:"-" db:"password"`
-	Email     *string   `json:"email" db:"email"`
+	Email     string    `json:"email" db:"email"`
 	AvatarURL *string   `json:"avatar_url" db:"avatar_url"`
 	Active    bool      `json:"active" db:"active"`
 	Role      int16     `json:"role" db:"role"`
