@@ -19,6 +19,7 @@ type Config struct {
 	DBSSLMode       string `mapstructure:"DB_SSLMODE"`
 	UserServicePort int    `mapstructure:"USER_SERVICE_PORT"`
 	JWTSecretKey    string `mapstructure:"JWT_SECRET_KEY"`
+	CloudinaryURL   string `mapstructure:"CLOUDINARY_URL"`
 }
 
 // DSN (Data Source Name) mengembalikan connection string untuk database.
@@ -48,6 +49,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("DB_SSLMODE")
 	viper.BindEnv("USER_SERVICE_PORT")
 	viper.BindEnv("JWT_SECRET_KEY")
+	viper.BindEnv("CLOUDINARY_URL")
 
 	// Unmarshal semua konfigurasi yang ditemukan ke dalam struct Config
 	err = viper.Unmarshal(&config)

@@ -23,3 +23,7 @@ func Success[T any](c *gin.Context, statusCode int, data T) {
 func Error(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, APIResponse[any]{Detail: &message})
 }
+
+func SuccessWithoutData(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, APIResponse[any]{Detail: &message})
+}
