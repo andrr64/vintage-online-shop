@@ -32,7 +32,7 @@ type LoginRequest struct {
 type UserProfileResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
-	Firstname *string    `json:"firstname"`
+	Firstname string    `json:"firstname"`
 	Lastname  *string   `json:"lastname"`
 	Email     string    `json:"email"`
 	AvatarURL *string   `json:"avatar_url"`

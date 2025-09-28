@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"time"
 	"vintage-server/internal/model"
@@ -28,18 +29,14 @@ func NewService(repo Repository, jwtSecret string) Service {
 }
 
 // --- User & Authentication ---
-// File: internal/service/user/service.go
-
-// File: internal/service/user/service.go
-
-func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfileResponse, error) {
+// File: internal/service/account/service.go
+func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error) {
 	// 1. Validasi duplikasi data dalam satu transaksi untuk konsistensi
-	// Kita cek keduanya, tapi pesan error yang kita kembalikan akan sama.
 	_, err := s.repo.FindAccountByUsername(ctx, req.Username)
 	if err != sql.ErrNoRows { // Jika BUKAN error "tidak ketemu"
 		if err == nil { // Jika tidak ada error sama sekali, artinya username ditemukan
 			// KEMBALIKAN PESAN ERROR AMBIGU
-			return UserProfileResponse{}, apperror.New(apperror.ErrCodeConflict, "username or email already exists")
+			return UserProfileResponse{}, apperror.New(apperror.ErrCodeConflict, "Username or Email already taken")
 		}
 		// Untuk error database lainnya
 		log.Printf("Error finding account by username: %v", err)
@@ -50,14 +47,12 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 	if err != sql.ErrNoRows { // Jika BUKAN error "tidak ketemu"
 		if err == nil { // Jika tidak ada error sama sekali, artinya email ditemukan
 			// KEMBALIKAN PESAN ERROR AMBIGU YANG SAMA
-			return UserProfileResponse{}, apperror.New(apperror.ErrCodeConflict, "username or email already exists")
+			return UserProfileResponse{}, apperror.New(apperror.ErrCodeConflict, "Username or Email already taken")
 		}
 		// Untuk error database lainnya
 		log.Printf("Error finding account by email: %v", err)
 		return UserProfileResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
 	}
-
-	// Jika kita sampai di sini, artinya username dan email tersedia.
 
 	// 2. Hash password
 	hashedPassword, err := hash.Generate(req.Password)
@@ -69,10 +64,9 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 	// 3. Buat entitas akun baru
 	newAccount := model.Account{
 		Username:  req.Username,
-		Email:     req.Email, // <-- PERBAIKAN: Ambil alamat memori dari string
+		Email:     req.Email,
 		Password:  hashedPassword,
-		Role:      model.RoleCustomer, // Role default: Customer
-		Firstname: &req.Firstname,
+		Firstname: req.Firstname,
 		Lastname:  req.Lastname,
 		Active:    true,
 		CreatedAt: time.Now(),
@@ -80,7 +74,7 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 	}
 
 	// 4. Simpan ke repository
-	createdAcc, err := s.repo.SaveAccount(ctx, newAccount)
+	createdAcc, err := s.repo.SaveAccount(ctx, newAccount, "customer")
 	if err != nil {
 		log.Printf("Error saving account: %v", err)
 		return UserProfileResponse{}, apperror.New(apperror.ErrCodeInternal, "failed to create account")
@@ -99,47 +93,37 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 	return response, nil
 }
 
-// File: internal/service/user/service.go
-
-// Login melakukan autentikasi user dengan username/email dan password
-func (s *service) Login(ctx context.Context, req LoginRequest) (LoginResponse, error) {
+// LoginCustomer melakukan autentikasi user dengan username/email dan password
+func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error) {
 	var acc model.Account
 	var err error
 
-	// 1. Cari akun berdasarkan identifier (email atau username)
+	roleName := "customer"
+
 	if strings.Contains(req.Identifier, "@") {
-		acc, err = s.repo.FindAccountByEmail(ctx, req.Identifier)
+		acc, err = s.repo.FindAccountByEmailWithRole(ctx, req.Identifier, roleName)
 	} else {
-		acc, err = s.repo.FindAccountByUsername(ctx, req.Identifier)
+		acc, err = s.repo.FindAccountByUsernameWithRole(ctx, req.Identifier, roleName)
 	}
 
-	// 2. Handle error pencarian akun (user tidak ada atau error DB)
-	// Jika user tidak ditemukan (sql.ErrNoRows), kita tetap anggap sebagai Unauthorized.
-	// Ini untuk mencegah user enumeration.
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
 		}
-		// Untuk error database lainnya, log error asli dan kembalikan error internal.
-		log.Printf("Error finding account: %v", err) // Contoh logging
+		log.Printf("Error finding account: %v", err)
 		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
 	}
 
-	// 3. Verifikasi password
-	err = hash.Verify(acc.Password, req.Password)
-	if err != nil {
-		// Jika password salah, kembalikan error Unauthorized yang SAMA.
+	if err := hash.Verify(acc.Password, req.Password); err != nil {
 		return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
 	}
 
-	// 4. Buat token JWT jika semua berhasil
-	token, err := s.jwt.GenerateToken(acc.ID, acc.Role)
+	token, err := s.jwt.GenerateToken(acc.ID, []string{roleName})
 	if err != nil {
-		log.Printf("Error generating token: %v", err) // Contoh logging
+		log.Printf("Error generating token: %v", err)
 		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
 	}
 
-	// 5. Kembalikan response sukses dengan DTO
 	return LoginResponse{
 		AccessToken: token,
 		UserProfile: UserProfileResponse{
@@ -151,6 +135,56 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (LoginResponse, e
 			Lastname:  acc.Lastname,
 		},
 	}, nil
+}
+
+// LoginAdmin
+func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
+	var acc model.Account
+	var err error
+
+	role := "admin"
+	if strings.Contains(req.Identifier, "@") {
+		acc, err = s.repo.FindAccountByEmailWithRole(ctx, req.Identifier, role)
+	} else {
+		acc, err = s.repo.FindAccountByUsernameWithRole(ctx, req.Identifier, role)
+	}
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return LoginResponse{}, apperror.New(
+				apperror.ErrCodeUnauthorized,
+				"Invalid Data",
+			)
+		}
+		log.Printf("Error finding account: %v", err) // Contoh logging
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Invalid Data")
+	}
+
+	err = hash.Verify(acc.Password, req.Password)
+	if err != nil {
+		return LoginResponse{}, apperror.New(
+			apperror.ErrCodeUnauthorized,
+			"Invalid Data",
+		)
+	}
+	access_token, err := s.jwt.GenerateToken(acc.ID, []string{role})
+	if err != nil {
+		return LoginResponse{}, &apperror.AppError{
+			Code:    apperror.ErrCodeInternal,
+			Message: err.Error(),
+		}
+	}
+	return LoginResponse{
+		AccessToken: access_token,
+		UserProfile: UserProfileResponse{
+			ID:        acc.ID,
+			Username:  acc.Username,
+			Email:     acc.Email,
+			Firstname: acc.Firstname,
+			Lastname:  acc.Lastname,
+			AvatarURL: acc.AvatarURL,
+		},
+	}, nil
+
 }
 
 func (s *service) DeactivateUser(ctx context.Context, userID int64, reason string) error {

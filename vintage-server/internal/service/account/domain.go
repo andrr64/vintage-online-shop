@@ -13,10 +13,11 @@ import (
 type Service interface {
 	// --- User & Authentication ---
 	// Usecase: CustomerRegister
-	Register(ctx context.Context, req RegisterRequest) (UserProfileResponse, error)
+	RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error)
 
 	// Usecase: CustomerLogin, SellerLogin, AdminLogin
-	Login(ctx context.Context, req LoginRequest) (LoginResponse, error)
+	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
+	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
 	// Usecase: AdminManage Users
 	DeactivateUser(ctx context.Context, userID int64, reason string) error
@@ -46,9 +47,13 @@ type Service interface {
 type Repository interface {
 	// --- Account ---
 	FindAccountByID(ctx context.Context, id int64) (model.Account, error)
-	FindAccountByEmail(ctx context.Context, email string) (model.Account, error)
+	FindAccountByEmailWithRole(ctx context.Context, email string, roleName string) (model.Account, error)
+	FindAccountByUsernameWithRole(ctx context.Context, username string, roleName string) (model.Account, error)
+
 	FindAccountByUsername(ctx context.Context, username string) (model.Account, error)
-	SaveAccount(ctx context.Context, account model.Account) (model.Account, error)
+	FindAccountByEmail(ctx context.Context, email string) (model.Account, error)
+
+	SaveAccount(ctx context.Context, account model.Account, roleName string) (model.Account, error)
 	UpdateAccount(ctx context.Context, account model.Account) error
 
 	// --- Address ---

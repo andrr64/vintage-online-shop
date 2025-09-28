@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
-	"vintage-server/internal/service/user" // Sesuaikan path
+	user "vintage-server/internal/service/account" // Sesuaikan path
 	"vintage-server/pkg/config"
 )
 
@@ -36,12 +36,19 @@ func main() {
 	// Ini adalah "API Contract" yang sesungguhnya
 	api := router.Group("/api/v1") // Grup rute untuk versioning
 	{
-		customer := api.Group("/customer")
+		account := api.Group("/account")
 		{
-			customer.POST("/register", userHandler.Register)
-			customer.POST("/login", userHandler.Login)
-			// ... rute untuk address, wishlist, dll.
+			customer := account.Group("/customer")
+			{
+				customer.POST("/register", userHandler.RegisterCustomer)
+				customer.POST("/login", userHandler.LoginCustomer)
+			}
+			admin := account.Group("/admin")
+			{
+				admin.POST("/login", userHandler.LoginAdmin)
+			}
 		}
+
 	}
 
 	// 5. Jalankan server

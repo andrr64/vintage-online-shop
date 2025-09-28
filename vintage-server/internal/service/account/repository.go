@@ -20,7 +20,6 @@ func NewRepository(db *sqlx.DB) Repository {
 }
 
 // --- Account ---
-
 func (r *repository) IsUsernameUsed(ctx context.Context, username string) (bool, error) {
 	var exists bool
 	query := "SELECT EXISTS (SELECT 1 FROM accounts WHERE username = $1)"
@@ -38,35 +37,119 @@ func (r *repository) FindAccountByID(ctx context.Context, id int64) (model.Accou
 	return account, err
 }
 
-func (r *repository) FindAccountByEmail(ctx context.Context, email string) (model.Account, error) {
+func (r *repository) FindAccountByEmailWithRole(ctx context.Context, email string, roleName string) (model.Account, error) {
 	var account model.Account
-	query := "SELECT * FROM accounts WHERE email = $1"
-	err := r.db.GetContext(ctx, &account, query, email)
+	query := `
+		SELECT a.*
+		FROM accounts a
+		JOIN account_roles ar ON a.id = ar.account_id
+		JOIN roles r ON ar.role_id = r.id
+		WHERE a.email = $1 AND r.name = $2
+		LIMIT 1
+	`
+	err := r.db.GetContext(ctx, &account, query, email, roleName)
 	return account, err
 }
+
+func (r *repository) FindAccountByUsernameWithRole(ctx context.Context, username string, roleName string) (model.Account, error) {
+	var account model.Account
+	query := `
+		SELECT a.*
+		FROM accounts a
+		JOIN account_roles ar ON a.id = ar.account_id
+		JOIN roles r ON ar.role_id = r.id
+		WHERE a.username = $1 AND r.name = $2
+		LIMIT 1
+	`
+	err := r.db.GetContext(ctx, &account, query, username, roleName)
+	return account, err
+}
+
 func (r *repository) FindAccountByUsername(ctx context.Context, username string) (model.Account, error) {
 	var account model.Account
-	query := "SELECT * FROM accounts WHERE username = $1"
+	query := `
+		SELECT a.* 
+		FROM accounts a
+		WHERE a.username = $1
+		LIMIT 1
+	`
 	err := r.db.GetContext(ctx, &account, query, username)
 	return account, err
 }
 
-func (r *repository) SaveAccount(ctx context.Context, account model.Account) (model.Account, error) {
-	var savedAccount model.Account
+func (r *repository) FindAccountByEmail(ctx context.Context, email string) (model.Account, error) {
+	var account model.Account
 	query := `
-        INSERT INTO accounts (firstname, lastname, username, email, password, role, active, created_at, updated_at)
-        VALUES (:firstname, :lastname, :username, :email, :password, :role, :active, :created_at, :updated_at)
+		SELECT a.* 
+		FROM accounts a
+		WHERE a.email = $1
+		LIMIT 1
+	`
+	err := r.db.GetContext(ctx, &account, query, email)
+	return account, err
+}
+
+// File: internal/service/user/repository.go
+
+func (r *repository) SaveAccount(ctx context.Context, account model.Account, roleName string) (savedAccount model.Account, err error) {
+	// 1. Persiapan transaksi
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return model.Account{}, err
+	}
+
+	// 2. Fungsi defer commit atau rollback
+	defer func() {
+		if p := recover(); p != nil || err != nil {
+			tx.Rollback()
+			if p != nil {
+				panic(p)
+			}
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	// 3. Insert ke tabel 'accounts'
+	queryAcc := `
+        INSERT INTO accounts ( firstname, lastname, username, email, password, active, created_at, updated_at)
+        VALUES (:firstname, :lastname, :username, :email, :password, :active, :created_at, :updated_at)
         RETURNING *`
-	rows, err := r.db.NamedQueryContext(ctx, query, account)
+
+	// ================= PERBAIKAN DI SINI =================
+	// Siapkan named statement di dalam transaksi
+	stmt, err := tx.PrepareNamedContext(ctx, queryAcc)
+	if err != nil {
+		return model.Account{}, err
+	}
+	defer stmt.Close() // Jangan lupa tutup statement
+
+	// Eksekusi statement dengan data dari struct 'account'
+	rows, err := stmt.QueryxContext(ctx, account)
 	if err != nil {
 		return model.Account{}, err
 	}
 	defer rows.Close()
+	// =======================================================
+
 	if rows.Next() {
-		if err := rows.StructScan(&savedAccount); err != nil {
+		if err = rows.StructScan(&savedAccount); err != nil {
 			return model.Account{}, err
 		}
 	}
+
+	// ... (sisa kodenya sudah benar) ...
+	var roleID int64
+	err = tx.GetContext(ctx, &roleID, "SELECT id FROM roles WHERE name = $1", roleName)
+	if err != nil {
+		return model.Account{}, err
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO account_roles (account_id, role_id) VALUES ($1, $2)", savedAccount.ID, roleID)
+	if err != nil {
+		return model.Account{}, err
+	}
+
 	return savedAccount, nil
 }
 
@@ -102,7 +185,6 @@ func (r *repository) SaveAddress(ctx context.Context, address model.Address) (mo
 	}
 	return savedAddress, nil
 }
-
 
 func (r *repository) FindAddressesByAccountID(ctx context.Context, accountID int64) ([]model.Address, error) {
 	var addresses []model.Address
