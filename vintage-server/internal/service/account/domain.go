@@ -33,7 +33,7 @@ type Service interface {
 
 	// --- Address Management ---
 	// Usecase: CustomerManage Addresses
-	AddAddress(ctx context.Context, userID int64, address model.Address) (model.Address, error)
+	AddAddress(ctx context.Context, userID uuid.UUID, req AddAddressRequest) (model.Address, error)
 	GetAddressesByUserID(ctx context.Context, userID int64) ([]model.Address, error)
 	UpdateAddress(ctx context.Context, userID, addressID int64, address model.Address) (model.Address, error)
 	DeleteAddress(ctx context.Context, userID, addressID int64) error

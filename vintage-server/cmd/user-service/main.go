@@ -56,6 +56,8 @@ func main() {
 					protected.POST("/logout", userHandler.Logout)
 					protected.PUT("/update-profile", userHandler.UpdateProfile)
 					protected.PUT("/update-avatar", userHandler.UpdateAvatar)
+					
+					protected.POST("/address", userHandler.CreateAddress)
 				}
 			}
 

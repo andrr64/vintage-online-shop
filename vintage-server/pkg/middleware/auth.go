@@ -27,7 +27,7 @@ func AuthMiddleware(jwtSvc *auth.JWTService) gin.HandlerFunc {
 
 		// Simpan info user dari token di context untuk dipakai oleh handler
 		c.Set("accountID", claims.AccountID)
-		c.Set("roles", claims.Roles)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }

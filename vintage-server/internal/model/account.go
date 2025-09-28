@@ -16,7 +16,7 @@ const (
 type Account struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	Username  string    `json:"username" db:"username"`
-	Firstname string   `json:"firstname" db:"firstname"`
+	Firstname string    `json:"firstname" db:"firstname"`
 	Lastname  *string   `json:"lastname" db:"lastname"`
 	Password  string    `json:"-" db:"password"`
 	Email     string    `json:"email" db:"email"`
@@ -34,7 +34,7 @@ type Roles struct {
 // Address merepresentasikan tabel 'addresses'
 type Address struct {
 	ID             int64     `json:"id" db:"id"`
-	AccountID      int64     `json:"account_id" db:"account_id"`
+	AccountID      uuid.UUID `json:"account_id" db:"account_id"`
 	DistrictID     string    `json:"district_id" db:"district_id"`
 	RegencyID      string    `json:"regency_id" db:"regency_id"`
 	ProvinceID     string    `json:"province_id" db:"province_id"`

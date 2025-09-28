@@ -6,6 +6,7 @@ import (
 	"vintage-server/pkg/apperror" // Path ke package error kustom kita
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response" // Path ke package error kustom kita
+	"vintage-server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -71,45 +72,23 @@ func (h *Handler) LoginCustomer(c *gin.Context) {
 	c.SetCookie(
 		"access_token",
 		loginResponse.AccessToken,
-		3600*72, // 3 hari
+		3600*24, // 3 hari
 		"/",     // path
 		"",      // domain (atau kosong "")
 		false,   // secure (true kalau https)
 		true,    // httpOnly biar gak bisa diakses JS
 	)
-
 	response.Success(c, http.StatusOK, loginResponse)
 }
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
-	// Ambil accountID dari context
-	accountIDv, exists := c.Get("accountID")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "User ID not found in context")
+	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
+	if err != nil || role == nil {
+		response.Error(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	// Ambil roles dari context
-	rolesV, exists := c.Get("roles")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "Roles not found in context")
-		return
-	}
-
-	accountID, ok := accountIDv.(uuid.UUID)
-	if !ok {
-		response.Error(c, http.StatusInternalServerError, "Invalid user ID format in context")
-		return
-	}
-
-	roles, ok := rolesV.([]string)
-	if !ok {
-		response.Error(c, http.StatusInternalServerError, "Invalid roles format in context")
-		return
-	}
-
-	// Cek role admin (tidak boleh update profile via endpoint ini)
-	if helper.Contains(roles, "admin") {
+	if *role == "admin" {
 		response.Error(c, http.StatusForbidden, "Admin is not allowed to update profile here")
 		return
 	}
@@ -130,15 +109,10 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 }
 
 func (h *Handler) UpdateAvatar(c *gin.Context) {
-	accountIDv, exists := c.Get("accountID")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "User ID not found in context")
-		return
-	}
+	accountID, _, err := helper.ExtractAccountInfoFromToken(c)
 
-	accountID, ok := accountIDv.(uuid.UUID)
-	if !ok {
-		response.Error(c, http.StatusInternalServerError, "Invalid user ID format")
+	if err != nil {
+		response.Error(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -150,7 +124,7 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 	}
 
 	// validasi ukuran file (max 2MB)
-	if fileHeader.Size > 2*1024*1024 {
+	if utils.SizeIsOk(fileHeader, utils.BytesToMegaBytes(2)) {
 		response.Error(c, http.StatusBadRequest, "File size must be less than 2MB")
 		return
 	}
@@ -171,6 +145,30 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, res)
+}
+
+func (h *Handler) CreateAddress(c *gin.Context) {
+	var address AddAddressRequest
+	if err := c.ShouldBindJSON(&address); err != nil {
+		response.ErrorBadRequest(c)
+		return
+	}
+	accountId, role, err := helper.ExtractAccountInfoFromToken(c)
+	if err != nil {
+		response.ErrorUnauthorized(c, err.Error())
+		return
+	}
+	if *role != "customer" {
+		response.ErrorForbidden(c)
+		return
+	}
+
+	res, err := h.svc.AddAddress(c.Request.Context(), accountId, address)
+	if err != nil {
+		response.ErrorInternalServer(c, err.Error())
+		return
+	}
+	response.Success(c, http.StatusCreated, res)
 }
 
 func (h *Handler) Logout(c *gin.Context) {

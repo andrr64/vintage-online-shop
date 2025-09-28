@@ -171,7 +171,7 @@ func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginRes
 		return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
 	}
 
-	token, err := s.jwt.GenerateToken(acc.ID, []string{roleName})
+	token, err := s.jwt.GenerateToken(acc.ID, roleName)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
@@ -239,7 +239,7 @@ func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginRespon
 			"Invalid Data",
 		)
 	}
-	access_token, err := s.jwt.GenerateToken(acc.ID, []string{role})
+	access_token, err := s.jwt.GenerateToken(acc.ID, role)
 	if err != nil {
 		return LoginResponse{}, &apperror.AppError{
 			Code:    apperror.ErrCodeInternal,
@@ -265,9 +265,21 @@ func (s *service) GetUserProfile(ctx context.Context, userID int64) (model.Accou
 
 // --- Address Management ---
 
-func (s *service) AddAddress(ctx context.Context, userID int64, req model.Address) (model.Address, error) {
-	// TODO: Implement business logic
-	return model.Address{}, nil
+func (s *service) AddAddress(ctx context.Context, userID uuid.UUID, req AddAddressRequest) (model.Address, error) {
+	address := NewAddressFromRequest(userID, req, false)
+
+	address, err := s.repo.SaveAddress(ctx, address)
+
+	if err != nil {
+		return model.Address{}, err
+	}
+
+	address, err = s.repo.SaveAddress(ctx, address)
+
+	if err != nil {
+		return model.Address{}, err
+	}
+	return address, nil
 }
 
 func (s *service) GetAddressesByUserID(ctx context.Context, userID int64) ([]model.Address, error) {

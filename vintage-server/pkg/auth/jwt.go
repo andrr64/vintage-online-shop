@@ -23,19 +23,19 @@ func NewJWTService(secretKey string) *JWTService {
 // Update: Role jadi array string (user bisa punya banyak role).
 type Claims struct {
 	AccountID uuid.UUID `json:"account_id"`
-	Roles     []string  `json:"roles"`
+	Role     string    `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken membuat token JWT baru untuk user.
-func (s *JWTService) GenerateToken(userID uuid.UUID, roles []string) (string, error) {
+func (s *JWTService) GenerateToken(userID uuid.UUID, role string) (string, error) {
 	// Tentukan masa berlaku token
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	// Buat claims
 	claims := &Claims{
 		AccountID: userID,
-		Roles:     roles,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
