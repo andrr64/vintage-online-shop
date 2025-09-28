@@ -10,21 +10,26 @@ import (
 	"vintage-server/pkg/apperror"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/hash"
+	"vintage-server/pkg/uploader"
 
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // service adalah struct yang akan mengimplementasikan interface Service dari domain.go
 type service struct {
-	repo Repository
-	jwt  *auth.JWTService
+	repo     Repository
+	jwt      *auth.JWTService
+	uploader uploader.Uploader // <-- Tambahkan dependency ke uploader
 }
 
 // NewService adalah constructor untuk service
-func NewService(repo Repository, jwtSecret string) Service {
+func NewService(repo Repository, jwtSecret string, uploader uploader.Uploader) Service {
 	return &service{
-		repo: repo,
-		jwt:  auth.NewJWTService(jwtSecret),
+		repo:     repo,
+		jwt:      auth.NewJWTService(jwtSecret),
+		uploader: uploader,
 	}
 }
 
@@ -93,6 +98,11 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 	return response, nil
 }
 
+func (s *service) Logout(ctx context.Context, userId uuid.UUID) (string, error) {
+	// implementation logging, dst
+	return "OK", nil
+}
+
 // LoginCustomer melakukan autentikasi user dengan username/email dan password
 func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error) {
 	var acc model.Account
@@ -135,6 +145,11 @@ func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginRes
 			Lastname:  acc.Lastname,
 		},
 	}, nil
+}
+
+func (s *service) UpdateProfile(ctx context.Context, account_id uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error) {
+
+	return UserProfileResponse{}, nil
 }
 
 // LoginAdmin

@@ -4,15 +4,18 @@ import (
 	"errors"
 	"net/http"
 	"vintage-server/pkg/apperror" // Path ke package error kustom kita
+	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response" // Path ke package error kustom kita
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Handler adalah struct yang memegang dependency ke Service
 type Handler struct {
 	svc Service
 }
+
 
 // NewHandler adalah constructor untuk handler
 func NewHandler(svc Service) *Handler {
@@ -77,6 +80,84 @@ func (h *Handler) LoginCustomer(c *gin.Context) {
 	)
 
 	response.Success(c, http.StatusOK, loginResponse)
+}
+
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	// Ambil accountID dari context
+	accountIDv, exists := c.Get("accountID")
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, "User ID not found in context")
+		return
+	}
+
+	// Ambil roles dari context
+	rolesV, exists := c.Get("roles")
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, "Roles not found in context")
+		return
+	}
+
+	accountID, ok := accountIDv.(uuid.UUID)
+	if !ok {
+		response.Error(c, http.StatusInternalServerError, "Invalid user ID format in context")
+		return
+	}
+
+	roles, ok := rolesV.([]string)
+	if !ok {
+		response.Error(c, http.StatusInternalServerError, "Invalid roles format in context")
+		return
+	}
+
+	// Cek role admin (tidak boleh update profile via endpoint ini)
+	if helper.Contains(roles, "admin") {
+		response.Error(c, http.StatusForbidden, "Admin is not allowed to update profile here")
+		return
+	}
+
+	// Bind request body
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	_, err := h.svc.UpdateProfile(c.Request.Context(), accountID, req)
+	if err != nil {
+		response.Error(c, apperror.ErrCodeInternal, "Something wrong when we try to update your data")
+		return
+	}
+
+	detail := "OK"
+	c.JSON(http.StatusOK, response.APIResponse[any]{
+		Detail: &detail,
+	})
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+	accountIDv, exists := c.Get("accountID")
+	if !exists {
+		// Ini adalah kasus aneh, seharusnya tidak terjadi jika middleware dipasang benar
+		response.Error(c, http.StatusUnauthorized, "User ID not found in context")
+		return
+	}
+
+	accountID, ok := accountIDv.(uuid.UUID)
+	if !ok {
+		// Error ini mengindikasikan ada masalah programming, bukan input user
+		response.Error(c, http.StatusInternalServerError, "Invalid user ID format in context")
+		return
+	}
+
+	_, err := h.svc.Logout(c.Request.Context(), accountID)
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	response.Success(c, http.StatusOK, "Logged out successfully")
 }
 
 func (h *Handler) LoginAdmin(c *gin.Context) {

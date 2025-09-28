@@ -24,6 +24,11 @@ type RegisterRequest struct {
 	Password  string  `json:"password" binding:"required,min=8"`
 }
 
+type UpdateProfileRequest struct {
+	Firstname string  `json:"firstname" binding:"required"`
+	Lastname  *string `json:"lastname"`
+}
+
 type LoginRequest struct {
 	Identifier string `json:"identifier" binding:"required"` // bisa username / email
 	Password   string `json:"password" binding:"required"`

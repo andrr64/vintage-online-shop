@@ -5,6 +5,8 @@ package user
 import (
 	"context"
 	"vintage-server/internal/model" // Sesuaikan dengan path proyekmu
+
+	"github.com/google/uuid"
 )
 
 // =================================================================================
@@ -15,9 +17,14 @@ type Service interface {
 	// Usecase: CustomerRegister
 	RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error)
 
+	// Usecase: UpdateProfile
+	UpdateProfile(ctx context.Context, userid uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error)
+
 	// Usecase: CustomerLogin, SellerLogin, AdminLogin
 	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
 	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
+
+	Logout(ctx context.Context, userId uuid.UUID) (string, error) 
 
 	// Usecase: AdminManage Users
 	DeactivateUser(ctx context.Context, userID int64, reason string) error
@@ -37,7 +44,7 @@ type Service interface {
 	// Usecase: CustomerAdd/View/Remove Wishlist
 	AddToWishlist(ctx context.Context, userID, productID int64) error
 	GetWishlistByUserID(ctx context.Context, userID int64) ([]WishlistItemDetail, error)
-	RemoveFromWishlist(ctx context.Context, userID, productID int64) error
+	RemoveFromWishlist(ctx context.Context, userID int64, productID int64) error
 }
 
 // =================================================================================
