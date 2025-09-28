@@ -3,8 +3,6 @@ package user
 import (
 	"time"
 	"vintage-server/internal/model"
-
-	"github.com/google/uuid"
 )
 
 // WishlistItemDetail adalah DTO untuk menampilkan wishlist beserta detail produk.
@@ -36,7 +34,6 @@ type LoginRequest struct {
 }
 
 type UserProfileResponse struct {
-	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
 	Firstname string    `json:"firstname"`
 	Lastname  *string   `json:"lastname"`
@@ -54,7 +51,6 @@ func ConvertAccountToUserProfileResponse(acc *model.Account) UserProfileResponse
 		return UserProfileResponse{}
 	}
 	return UserProfileResponse{
-		ID:        acc.ID,
 		Username:  acc.Username,
 		Firstname: acc.Firstname,
 		Lastname:  acc.Lastname,

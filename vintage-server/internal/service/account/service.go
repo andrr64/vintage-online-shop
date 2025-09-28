@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
+	"mime/multipart"
 	"time"
 	"vintage-server/internal/model"
 	"vintage-server/pkg/apperror"
@@ -87,7 +89,6 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 
 	// 5. Kembalikan response sukses menggunakan DTO
 	response := UserProfileResponse{
-		ID:        createdAcc.ID,
 		Username:  createdAcc.Username,
 		Firstname: createdAcc.Firstname,
 		Lastname:  createdAcc.Lastname,
@@ -96,6 +97,48 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 	}
 
 	return response, nil
+}
+
+func (s *service) UpdateAvatar(
+	ctx context.Context,
+	accountId uuid.UUID,
+	file multipart.File,
+) (UserProfileResponse, error) {
+	// 1. Cari account
+	acc, err := s.repo.FindAccountByID(ctx, accountId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return UserProfileResponse{}, apperror.New(404, "Account not found")
+		}
+		return UserProfileResponse{}, apperror.New(500, "Failed to fetch account data")
+	}
+
+	oldURL := acc.AvatarURL
+
+	// 2. Upload ke Cloudinary
+	filename := fmt.Sprintf("%s-avatar", uuid.NewString())
+	newURL, err := s.uploader.Upload(ctx, file, filename)
+	if err != nil {
+		return UserProfileResponse{}, apperror.New(500, "Failed to upload avatar")
+	}
+
+	// 3. Update account dengan avatar baru
+	acc.AvatarURL = &newURL
+	acc.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateAccount(ctx, acc); err != nil {
+		// rollback → hapus file baru yang sudah diupload
+		_ = s.uploader.Delete(ctx, newURL)
+		return UserProfileResponse{}, apperror.New(500, "Failed to update avatar in database")
+	}
+
+	// 4. Jika ada avatar lama → hapus dari Cloudinary (best effort, error diabaikan)
+	if oldURL != nil {
+		_ = s.uploader.Delete(ctx, *oldURL)
+	}
+
+	// 5. Return profile baru
+	return ConvertAccountToUserProfileResponse(&acc), nil
 }
 
 func (s *service) Logout(ctx context.Context, userId uuid.UUID) (string, error) {

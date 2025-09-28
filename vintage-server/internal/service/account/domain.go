@@ -4,9 +4,11 @@ package user
 
 import (
 	"context"
+	"mime/multipart"
 	"vintage-server/internal/model" // Sesuaikan dengan path proyekmu
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 // =================================================================================
@@ -16,12 +18,11 @@ type Service interface {
 	// --- User & Authentication ---
 	// Usecase: CustomerRegister
 	RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error)
-
-	// Usecase: UpdateProfile
-	UpdateProfile(ctx context.Context, userid uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error)
-
-	// Usecase: CustomerLogin, SellerLogin, AdminLogin
 	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
+
+	UpdateProfile(ctx context.Context, userid uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error)
+	UpdateAvatar(ctx context.Context, userID uuid.UUID, file multipart.File) (UserProfileResponse, error)
+
 	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
 	Logout(ctx context.Context, userId uuid.UUID) (string, error)
@@ -52,6 +53,9 @@ type Service interface {
 // =================================================================================
 // Repository mendefinisikan semua interaksi ke database yang dibutuhkan oleh Service.
 type Repository interface {
+	// DB
+	BeginTx(ctx context.Context) (*sqlx.Tx, error)
+
 	// --- Account ---
 	FindAccountByID(ctx context.Context, id uuid.UUID) (model.Account, error)
 	FindAccountByEmailWithRole(ctx context.Context, email string, roleName string) (model.Account, error)
@@ -62,6 +66,8 @@ type Repository interface {
 
 	SaveAccount(ctx context.Context, account model.Account, roleName string) (model.Account, error)
 	UpdateAccount(ctx context.Context, account model.Account) error
+
+	UpdateAvatarTx(ctx context.Context, tx *sqlx.Tx, avatarUrl string, id uuid.UUID) (model.Account, error)
 
 	// --- Address ---
 	SaveAddress(ctx context.Context, address model.Address) (model.Address, error)

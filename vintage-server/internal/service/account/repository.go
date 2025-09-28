@@ -19,6 +19,9 @@ func NewRepository(db *sqlx.DB) Repository {
 		db: db,
 	}
 }
+func (r *repository) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
+	return r.db.BeginTxx(ctx, nil) // pake default TxOptions
+}
 
 // --- Account ---
 func (r *repository) IsUsernameUsed(ctx context.Context, username string) (bool, error) {
@@ -147,6 +150,23 @@ func (r *repository) SaveAccount(ctx context.Context, account model.Account, rol
 	}
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO account_roles (account_id, role_id) VALUES ($1, $2)", savedAccount.ID, roleID)
+	if err != nil {
+		return model.Account{}, err
+	}
+
+	return savedAccount, nil
+}
+
+func (r *repository) UpdateAvatarTx(ctx context.Context, tx *sqlx.Tx, avatarUrl string, id uuid.UUID) (model.Account, error) {
+	query := `
+		UPDATE accounts 
+		SET avatar_url = $1
+		WHERE id = $2
+		RETURNING id, username, firstname, lastname, email, avatar_url
+	`
+
+	var savedAccount model.Account
+	err := tx.GetContext(ctx, &savedAccount, query, avatarUrl, id)
 	if err != nil {
 		return model.Account{}, err
 	}

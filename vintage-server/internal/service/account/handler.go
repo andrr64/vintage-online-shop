@@ -16,7 +16,6 @@ type Handler struct {
 	svc Service
 }
 
-
 // NewHandler adalah constructor untuk handler
 func NewHandler(svc Service) *Handler {
 	return &Handler{svc: svc}
@@ -127,6 +126,50 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		response.Error(c, apperror.ErrCodeInternal, "Something wrong when we try to update your data")
 		return
 	}
+	response.Success(c, http.StatusOK, res)
+}
+
+func (h *Handler) UpdateAvatar(c *gin.Context) {
+	accountIDv, exists := c.Get("accountID")
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, "User ID not found in context")
+		return
+	}
+
+	accountID, ok := accountIDv.(uuid.UUID)
+	if !ok {
+		response.Error(c, http.StatusInternalServerError, "Invalid user ID format")
+		return
+	}
+
+	// ambil file dari request
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Avatar file is required")
+		return
+	}
+
+	// validasi ukuran file (max 2MB)
+	if fileHeader.Size > 2*1024*1024 {
+		response.Error(c, http.StatusBadRequest, "File size must be less than 2MB")
+		return
+	}
+
+	// buka file
+	file, err := fileHeader.Open()
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to open uploaded file")
+		return
+	}
+	defer file.Close()
+
+	// panggil service
+	res, err := h.svc.UpdateAvatar(c.Request.Context(), accountID, file)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
