@@ -136,20 +136,35 @@ func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginRes
 
 	return LoginResponse{
 		AccessToken: token,
-		UserProfile: UserProfileResponse{
-			ID:        acc.ID,
-			Username:  acc.Username,
-			AvatarURL: acc.AvatarURL,
-			Email:     acc.Email,
-			Firstname: acc.Firstname,
-			Lastname:  acc.Lastname,
-		},
+		UserProfile: ConvertAccountToUserProfileResponse(&acc),
 	}, nil
 }
 
 func (s *service) UpdateProfile(ctx context.Context, account_id uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error) {
+	account, err := s.repo.FindAccountByID(ctx, account_id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return UserProfileResponse{}, apperror.New(
+				apperror.ErrCodeUnauthorized,
+				"Account Not Found",
+			)
+		}
+	}
 
-	return UserProfileResponse{}, nil
+	account.Firstname = req.Firstname
+	account.Lastname = req.Lastname
+	account.UpdatedAt = time.Now()
+
+	err = s.repo.UpdateAccount(ctx, account)
+
+	if err != nil {
+		return UserProfileResponse{}, apperror.New(
+			apperror.ErrCodeInternal,
+			"Something wrong happened when updating your data",
+		)
+	}
+
+	return ConvertAccountToUserProfileResponse(&account), nil
 }
 
 // LoginAdmin
@@ -190,14 +205,7 @@ func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginRespon
 	}
 	return LoginResponse{
 		AccessToken: access_token,
-		UserProfile: UserProfileResponse{
-			ID:        acc.ID,
-			Username:  acc.Username,
-			Email:     acc.Email,
-			Firstname: acc.Firstname,
-			Lastname:  acc.Lastname,
-			AvatarURL: acc.AvatarURL,
-		},
+		UserProfile: ConvertAccountToUserProfileResponse(&acc),
 	}, nil
 
 }

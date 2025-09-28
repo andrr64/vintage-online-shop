@@ -24,7 +24,7 @@ type Service interface {
 	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
 	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
-	Logout(ctx context.Context, userId uuid.UUID) (string, error) 
+	Logout(ctx context.Context, userId uuid.UUID) (string, error)
 
 	// Usecase: AdminManage Users
 	DeactivateUser(ctx context.Context, userID int64, reason string) error
@@ -53,7 +53,7 @@ type Service interface {
 // Repository mendefinisikan semua interaksi ke database yang dibutuhkan oleh Service.
 type Repository interface {
 	// --- Account ---
-	FindAccountByID(ctx context.Context, id int64) (model.Account, error)
+	FindAccountByID(ctx context.Context, id uuid.UUID) (model.Account, error)
 	FindAccountByEmailWithRole(ctx context.Context, email string, roleName string) (model.Account, error)
 	FindAccountByUsernameWithRole(ctx context.Context, username string, roleName string) (model.Account, error)
 

@@ -2,6 +2,7 @@ package user
 
 import (
 	"time"
+	"vintage-server/internal/model"
 
 	"github.com/google/uuid"
 )
@@ -46,4 +47,18 @@ type UserProfileResponse struct {
 type LoginResponse struct {
 	AccessToken string              `json:"access_token"`
 	UserProfile UserProfileResponse `json:"user"`
+}
+
+func ConvertAccountToUserProfileResponse(acc *model.Account) UserProfileResponse {
+	if acc == nil {
+		return UserProfileResponse{}
+	}
+	return UserProfileResponse{
+		ID:        acc.ID,
+		Username:  acc.Username,
+		Firstname: acc.Firstname,
+		Lastname:  acc.Lastname,
+		Email:     acc.Email,
+		AvatarURL: acc.AvatarURL,
+	}
 }

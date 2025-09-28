@@ -4,6 +4,7 @@ import (
 	"context"
 	"vintage-server/internal/model" // Sesuaikan path
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -30,7 +31,7 @@ func (r *repository) IsUsernameUsed(ctx context.Context, username string) (bool,
 	return exists, nil
 }
 
-func (r *repository) FindAccountByID(ctx context.Context, id int64) (model.Account, error) {
+func (r *repository) FindAccountByID(ctx context.Context, id uuid.UUID) (model.Account, error) {
 	var account model.Account
 	query := "SELECT * FROM accounts WHERE id = $1"
 	err := r.db.GetContext(ctx, &account, query, id)
@@ -157,6 +158,8 @@ func (r *repository) UpdateAccount(ctx context.Context, account model.Account) e
 	query := `UPDATE accounts SET 
 				username = :username, 
 				avatar_url = :avatar_url, 
+				firstname = :firstname,
+				lastname = :lastname,
 				active = :active,
 				updated_at = :updated_at
 			  WHERE id = :id`

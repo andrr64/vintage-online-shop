@@ -122,16 +122,12 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	_, err := h.svc.UpdateProfile(c.Request.Context(), accountID, req)
+	res, err := h.svc.UpdateProfile(c.Request.Context(), accountID, req)
 	if err != nil {
 		response.Error(c, apperror.ErrCodeInternal, "Something wrong when we try to update your data")
 		return
 	}
-
-	detail := "OK"
-	c.JSON(http.StatusOK, response.APIResponse[any]{
-		Detail: &detail,
-	})
+	response.Success(c, http.StatusOK, res)
 }
 
 func (h *Handler) Logout(c *gin.Context) {
