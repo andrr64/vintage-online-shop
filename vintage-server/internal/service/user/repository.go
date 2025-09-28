@@ -54,8 +54,8 @@ func (r *repository) FindAccountByUsername(ctx context.Context, username string)
 func (r *repository) SaveAccount(ctx context.Context, account model.Account) (model.Account, error) {
 	var savedAccount model.Account
 	query := `
-        INSERT INTO accounts (username, email, password, role, active, created_at, updated_at)
-        VALUES (:username, :email, :password, :role, :active, :created_at, :updated_at)
+        INSERT INTO accounts (firstname, lastname, username, email, password, role, active, created_at, updated_at)
+        VALUES (:firstname, :lastname, :username, :email, :password, :role, :active, :created_at, :updated_at)
         RETURNING *`
 	rows, err := r.db.NamedQueryContext(ctx, query, account)
 	if err != nil {

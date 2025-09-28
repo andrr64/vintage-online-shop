@@ -16,6 +16,8 @@ const (
 type Account struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	Username  string    `json:"username" db:"username"`
+	Firstname *string   `json:"firstname" db:"firstname"`
+	Lastname  *string   `json:"lastname" db:"lastname"`
 	Password  string    `json:"-" db:"password"`
 	Email     string    `json:"email" db:"email"`
 	AvatarURL *string   `json:"avatar_url" db:"avatar_url"`

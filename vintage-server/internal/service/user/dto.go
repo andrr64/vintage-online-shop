@@ -17,9 +17,11 @@ type WishlistItemDetail struct {
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Username  string  `json:"username" binding:"required"`
+	Firstname string  `json:"firstname" binding:"required"`
+	Lastname  *string `json:"lastname"`
+	Email     string  `json:"email" binding:"required,email"`
+	Password  string  `json:"password" binding:"required,min=8"`
 }
 
 type LoginRequest struct {
@@ -30,13 +32,13 @@ type LoginRequest struct {
 type UserProfileResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
+	Firstname *string    `json:"firstname"`
+	Lastname  *string   `json:"lastname"`
 	Email     string    `json:"email"`
 	AvatarURL *string   `json:"avatar_url"`
 }
 
 type LoginResponse struct {
-	AccessToken string  `json:"access_token"`
-	Username    string  `json:"username" binding:"required"`
-	Email       string `json:"email"`
-	AvatarURL   *string `json:"avatar_url"`
+	AccessToken string              `json:"access_token"`
+	UserProfile UserProfileResponse `json:"user"`
 }

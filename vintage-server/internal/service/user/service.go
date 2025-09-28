@@ -72,6 +72,8 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 		Email:     req.Email, // <-- PERBAIKAN: Ambil alamat memori dari string
 		Password:  hashedPassword,
 		Role:      model.RoleCustomer, // Role default: Customer
+		Firstname: &req.Firstname,
+		Lastname:  req.Lastname,
 		Active:    true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -88,6 +90,8 @@ func (s *service) Register(ctx context.Context, req RegisterRequest) (UserProfil
 	response := UserProfileResponse{
 		ID:        createdAcc.ID,
 		Username:  createdAcc.Username,
+		Firstname: createdAcc.Firstname,
+		Lastname:  createdAcc.Lastname,
 		Email:     createdAcc.Email,
 		AvatarURL: createdAcc.AvatarURL,
 	}
@@ -137,10 +141,15 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (LoginResponse, e
 
 	// 5. Kembalikan response sukses dengan DTO
 	return LoginResponse{
-		Username:    acc.Username,
-		AvatarURL:   acc.AvatarURL,
-		Email:       acc.Email,
 		AccessToken: token,
+		UserProfile: UserProfileResponse{
+			ID:        acc.ID,
+			Username:  acc.Username,
+			AvatarURL: acc.AvatarURL,
+			Email:     acc.Email,
+			Firstname: acc.Firstname,
+			Lastname:  acc.Lastname,
+		},
 	}, nil
 }
 
