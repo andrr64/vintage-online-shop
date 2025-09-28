@@ -56,12 +56,12 @@ entity "products" as products {
   *condition_id: uint8 <<FK>>
   *category_id: uint32 <<FK>>
   *brand_id: uint32 <<FK>> <<nullable>>
+  *size_id: uint32 <<FK>> <<nullable>>
   --
   name: varchar(128)
   summary: varchar(255)
   description: text
   price: uint64
-  size: varchar(8)
   stock: uint32
   is_latest: bool
   created_at: datetime
@@ -221,9 +221,16 @@ entity "admin_logs" as admin_logs {
   created_at: datetime
 }
 
+entity "product_size" as product_size {
+  *id: uint8<<PK>>
+  --
+  size_name: varchar(8)
+}
+
 ' === RELASI YANG DITAMBAHKAN ===
 accounts ||--o{ reviews
 accounts ||--o{ admin_logs
+product_size ||--|{ products
 
 products ||--o{ reviews
 products }o--|| brands
