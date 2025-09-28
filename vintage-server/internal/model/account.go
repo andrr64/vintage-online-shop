@@ -16,15 +16,19 @@ const (
 type Account struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	Username  string    `json:"username" db:"username"`
-	Firstname *string   `json:"firstname" db:"firstname"`
+	Firstname string   `json:"firstname" db:"firstname"`
 	Lastname  *string   `json:"lastname" db:"lastname"`
 	Password  string    `json:"-" db:"password"`
 	Email     string    `json:"email" db:"email"`
 	AvatarURL *string   `json:"avatar_url" db:"avatar_url"`
 	Active    bool      `json:"active" db:"active"`
-	Role      int16     `json:"role" db:"role"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type Roles struct {
+	ID   int64  `json:"role_id" db:"id"`
+	Name string `json:"role" db:"name"`
 }
 
 // Address merepresentasikan tabel 'addresses'
