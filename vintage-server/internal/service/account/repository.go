@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"vintage-server/internal/model" // Sesuaikan path
 
 	"github.com/google/uuid"
@@ -95,14 +97,15 @@ func (r *repository) FindAccountByEmail(ctx context.Context, email string) (mode
 
 // File: internal/service/user/repository.go
 
-func (r *repository) SaveAccount(ctx context.Context, account model.Account, roleName string) (savedAccount model.Account, err error) {
-	// 1. Persiapan transaksi
+func (r *repository) SaveAccount(ctx context.Context, account model.Account, roleName string) (model.Account, error) {
+	// Mulai transaction
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return model.Account{}, err
+		return model.Account{}, fmt.Errorf("gagal memulai transaksi: %w", err)
 	}
 
-	// 2. Fungsi defer commit atau rollback
+	var savedAccount model.Account
+	// Pastikan commit/rollback
 	defer func() {
 		if p := recover(); p != nil || err != nil {
 			tx.Rollback()
@@ -114,47 +117,41 @@ func (r *repository) SaveAccount(ctx context.Context, account model.Account, rol
 		}
 	}()
 
-	// 3. Insert ke tabel 'accounts'
-	queryAcc := `
-        INSERT INTO accounts ( firstname, lastname, username, email, password, active, created_at, updated_at)
-        VALUES (:firstname, :lastname, :username, :email, :password, :active, :created_at, :updated_at)
-        RETURNING *`
-
-	// ================= PERBAIKAN DI SINI =================
-	// Siapkan named statement di dalam transaksi
-	stmt, err := tx.PrepareNamedContext(ctx, queryAcc)
+	// ================== INSERT ACCOUNT ==================
+	stmt, err := tx.PrepareNamedContext(ctx, `
+        INSERT INTO accounts (
+            firstname, lastname, username, email, password, active, created_at, updated_at
+        ) VALUES (
+            :firstname, :lastname, :username, :email, :password, :active, :created_at, :updated_at
+        ) RETURNING *`)
 	if err != nil {
-		return model.Account{}, err
+		return model.Account{}, fmt.Errorf("gagal prepare statement account: %w", err)
 	}
-	defer stmt.Close() // Jangan lupa tutup statement
+	defer stmt.Close()
 
-	// Eksekusi statement dengan data dari struct 'account'
-	rows, err := stmt.QueryxContext(ctx, account)
+	// Get inserted account
+	err = stmt.GetContext(ctx, &savedAccount, account)
 	if err != nil {
-		return model.Account{}, err
-	}
-	defer rows.Close()
-	// =======================================================
-
-	if rows.Next() {
-		if err = rows.StructScan(&savedAccount); err != nil {
-			return model.Account{}, err
-		}
+		return model.Account{}, fmt.Errorf("gagal scan hasil akun: %w", err)
 	}
 
-	// ... (sisa kodenya sudah benar) ...
+	// ================== AMBIL ROLE ID ==================
 	var roleID int64
 	err = tx.GetContext(ctx, &roleID, "SELECT id FROM roles WHERE name = $1", roleName)
 	if err != nil {
-		return model.Account{}, err
+		if err == sql.ErrNoRows {
+			return model.Account{}, fmt.Errorf("role '%s' tidak ditemukan", roleName)
+		}
+		return model.Account{}, fmt.Errorf("gagal mendapatkan role id: %w", err)
 	}
 
+	// ================== INSERT ACCOUNT_ROLE ==================
 	_, err = tx.ExecContext(ctx, "INSERT INTO account_roles (account_id, role_id) VALUES ($1, $2)", savedAccount.ID, roleID)
 	if err != nil {
-		return model.Account{}, err
+		return model.Account{}, fmt.Errorf("gagal menghubungkan akun dengan role: %w", err)
 	}
 
-	return savedAccount, nil
+	return savedAccount, err
 }
 
 func (r *repository) UpdateAvatarTx(ctx context.Context, tx *sqlx.Tx, avatarUrl string, id uuid.UUID) (model.Account, error) {
@@ -192,12 +189,13 @@ func (r *repository) UpdateAccount(ctx context.Context, account model.Account) e
 func (r *repository) SaveAddress(ctx context.Context, address model.Address) (model.Address, error) {
 	var savedAddress model.Address
 	query := `
-		INSERT INTO addresses (account_id, district_id, regency_id, province_id, label, recipient_name, recipient_phone, street, postal_code, is_primary, created_at, updated_at)
-		VALUES (:account_id, :district_id, :regency_id, :province_id, :label, :recipient_name, :recipient_phone, :street, :postal_code, :is_primary, :created_at, :updated_at)
+		INSERT INTO addresses (account_id, village_id, district_id, regency_id, province_id, label, recipient_name, recipient_phone, street, postal_code, is_primary, created_at, updated_at)
+		VALUES (:account_id, :village_id, :district_id, :regency_id, :province_id, :label, :recipient_name, :recipient_phone, :street, :postal_code, :is_primary, :created_at, :updated_at)
 		RETURNING *`
 
 	rows, err := r.db.NamedQueryContext(ctx, query, address)
 	if err != nil {
+		fmt.Println(err.Error())
 		return model.Address{}, err
 	}
 	defer rows.Close()
@@ -209,25 +207,29 @@ func (r *repository) SaveAddress(ctx context.Context, address model.Address) (mo
 	return savedAddress, nil
 }
 
-func (r *repository) FindAddressesByAccountID(ctx context.Context, accountID int64) ([]model.Address, error) {
+func (r *repository) FindAddressesByAccountID(ctx context.Context, accountID uuid.UUID) ([]model.Address, error) {
 	var addresses []model.Address
 	query := "SELECT * FROM addresses WHERE account_id = $1 ORDER BY is_primary DESC, updated_at DESC"
 	err := r.db.SelectContext(ctx, &addresses, query, accountID)
 	return addresses, err
 }
 
-func (r *repository) FindAddressByIDAndAccountID(ctx context.Context, addressID, accountID int64) (model.Address, error) {
+func (r *repository) FindAddressByIDAndAccountID(ctx context.Context, addressID int64, accountID uuid.UUID) (model.Address, error) {
 	var address model.Address
 	query := "SELECT * FROM addresses WHERE id = $1 AND account_id = $2"
 	err := r.db.GetContext(ctx, &address, query, addressID, accountID)
 	return address, err
 }
 
-func (r *repository) UpdateAddress(ctx context.Context, address model.Address) (model.Address, error) {
+func (r *repository) UpdateAddress(ctx context.Context, accountId uuid.UUID, address model.Address) (model.Address, error) {
 	var updatedAddress model.Address
 	query := `
 		UPDATE addresses SET
 			label = :label,
+			province_id = :province_id,
+			regency_id = :regency_id,
+			district_id = :district_id,
+			village_id = :village_id,
 			recipient_name = :recipient_name,
 			recipient_phone = :recipient_phone,
 			street = :street,
@@ -249,10 +251,53 @@ func (r *repository) UpdateAddress(ctx context.Context, address model.Address) (
 	return updatedAddress, nil
 }
 
-func (r *repository) DeleteAddress(ctx context.Context, addressID, accountID int64) error {
+func (r *repository) DeleteAddress(ctx context.Context, addressID int64, accountID uuid.UUID) error {
 	query := "DELETE FROM addresses WHERE id = $1 AND account_id = $2"
 	_, err := r.db.ExecContext(ctx, query, addressID, accountID)
 	return err
+}
+
+func (r *repository) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, addressID int64) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			_ = tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	// 1. cari yang saat ini primary
+	var currentPrimaryID int64
+	querySelect := `SELECT id FROM addresses WHERE account_id = $1 AND is_primary = true LIMIT 1`
+	if err = tx.GetContext(ctx, &currentPrimaryID, querySelect, accountID); err != nil && err != sql.ErrNoRows {
+		fmt.Println(err)
+		return err
+	}
+
+	// 2. jika idnya beda, update yang lama jadi false
+	if currentPrimaryID != addressID {
+		queryUnset := `UPDATE addresses SET is_primary = false WHERE id = $1 AND account_id = $2`
+		if _, err = tx.ExecContext(ctx, queryUnset, currentPrimaryID, accountID); err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+
+	// 3. set primary baru
+	querySet := `UPDATE addresses SET is_primary = true WHERE id = $1 AND account_id = $2`
+	if _, err = tx.ExecContext(ctx, querySet, addressID, accountID); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 func (r *repository) TransactionSetPrimaryAddress(ctx context.Context, accountID, addressID int64) error {

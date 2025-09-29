@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"mime/multipart"
+	"net/http"
 	"time"
 	"vintage-server/internal/model"
 	"vintage-server/pkg/apperror"
@@ -35,8 +36,7 @@ func NewService(repo Repository, jwtSecret string, uploader uploader.Uploader) S
 	}
 }
 
-// --- User & Authentication ---
-// File: internal/service/account/service.go
+// ----- DONE ---------------
 func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error) {
 	// 1. Validasi duplikasi data dalam satu transaksi untuk konsistensi
 	_, err := s.repo.FindAccountByUsername(ctx, req.Username)
@@ -99,6 +99,74 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 	return response, nil
 }
 
+func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error) {
+	var acc model.Account
+	var err error
+
+	roleName := "customer"
+
+	if strings.Contains(req.Identifier, "@") {
+		acc, err = s.repo.FindAccountByEmailWithRole(ctx, req.Identifier, roleName)
+	} else {
+		acc, err = s.repo.FindAccountByUsernameWithRole(ctx, req.Identifier, roleName)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
+		}
+		log.Printf("Error finding account: %v", err)
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
+	}
+
+	if err := hash.Verify(acc.Password, req.Password); err != nil {
+		return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
+	}
+
+	token, err := s.jwt.GenerateToken(acc.ID, roleName)
+	if err != nil {
+		log.Printf("Error generating token: %v", err)
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
+	}
+
+	return LoginResponse{
+		AccessToken: token,
+		UserProfile: ConvertAccountToUserProfileResponse(&acc),
+	}, nil
+}
+
+func (s *service) Logout(ctx context.Context, userId uuid.UUID) (string, error) {
+	// implementation logging, dst
+	return "OK", nil
+}
+
+func (s *service) UpdateProfile(ctx context.Context, account_id uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error) {
+	account, err := s.repo.FindAccountByID(ctx, account_id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return UserProfileResponse{}, apperror.New(
+				apperror.ErrCodeUnauthorized,
+				"Account Not Found",
+			)
+		}
+	}
+
+	account.Firstname = req.Firstname
+	account.Lastname = req.Lastname
+	account.UpdatedAt = time.Now()
+
+	err = s.repo.UpdateAccount(ctx, account)
+
+	if err != nil {
+		return UserProfileResponse{}, apperror.New(
+			apperror.ErrCodeInternal,
+			"Something wrong happened when updating your data",
+		)
+	}
+
+	return ConvertAccountToUserProfileResponse(&account), nil
+}
+
 func (s *service) UpdateAvatar(
 	ctx context.Context,
 	accountId uuid.UUID,
@@ -141,76 +209,92 @@ func (s *service) UpdateAvatar(
 	return ConvertAccountToUserProfileResponse(&acc), nil
 }
 
-func (s *service) Logout(ctx context.Context, userId uuid.UUID) (string, error) {
-	// implementation logging, dst
-	return "OK", nil
-}
+func (s *service) AddAddress(ctx context.Context, accountID uuid.UUID, req AddAddressRequest) (UserAddress, error) {
+	address := NewAddressFromRequest(accountID, req, false)
 
-// LoginCustomer melakukan autentikasi user dengan username/email dan password
-func (s *service) LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error) {
-	var acc model.Account
-	var err error
-
-	roleName := "customer"
-
-	if strings.Contains(req.Identifier, "@") {
-		acc, err = s.repo.FindAccountByEmailWithRole(ctx, req.Identifier, roleName)
-	} else {
-		acc, err = s.repo.FindAccountByUsernameWithRole(ctx, req.Identifier, roleName)
-	}
+	address, err := s.repo.SaveAddress(ctx, address)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
+		if strings.Contains(err.Error(), "violate") {
+			return UserAddress{}, apperror.New(http.StatusBadRequest, "Bad request, check your data!")
 		}
-		log.Printf("Error finding account: %v", err)
-		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
+		return UserAddress{}, apperror.New(apperror.ErrCodeInternal, "Something wrong when adding your data")
 	}
 
-	if err := hash.Verify(acc.Password, req.Password); err != nil {
-		return LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid data")
-	}
+	address, err = s.repo.SaveAddress(ctx, address)
 
-	token, err := s.jwt.GenerateToken(acc.ID, roleName)
 	if err != nil {
-		log.Printf("Error generating token: %v", err)
-		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
+		return UserAddress{}, err
 	}
-
-	return LoginResponse{
-		AccessToken: token,
-		UserProfile: ConvertAccountToUserProfileResponse(&acc),
-	}, nil
+	return ConvertAddressToDTO(address), nil
 }
 
-func (s *service) UpdateProfile(ctx context.Context, account_id uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error) {
-	account, err := s.repo.FindAccountByID(ctx, account_id)
+func (s *service) UpdateAddress(ctx context.Context, accountId uuid.UUID, addressID int64, req UserAddress) (UserAddress, error) {
+	old, err := s.repo.FindAddressByIDAndAccountID(ctx, addressID, accountId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return UserProfileResponse{}, apperror.New(
-				apperror.ErrCodeUnauthorized,
-				"Account Not Found",
-			)
+			return UserAddress{}, apperror.New(apperror.ErrCodeNotFound, "Data not found!")
 		}
+		return UserAddress{}, apperror.New(apperror.ErrCodeInternal, "Something wrong")
 	}
 
-	account.Firstname = req.Firstname
-	account.Lastname = req.Lastname
-	account.UpdatedAt = time.Now()
+	old.ProvinceID = req.ProvinceID
+	old.RegencyID = req.RegencyID
+	old.DistrictID = req.DistrictID
+	old.VillageID = req.VillageID
+	old.RecipientName = req.RecipientName
+	old.RecipientPhone = req.RecipientPhone
+	old.Label = req.Label
+	old.RecipientPhone = req.RecipientPhone
+	old.PostalCode = req.PostalCode
+	old.Street = req.Street
 
-	err = s.repo.UpdateAccount(ctx, account)
+	_, err = s.repo.UpdateAddress(ctx, accountId, old)
 
 	if err != nil {
-		return UserProfileResponse{}, apperror.New(
-			apperror.ErrCodeInternal,
-			"Something wrong happened when updating your data",
-		)
+		return UserAddress{}, apperror.New(apperror.ErrCodeInternal, "Something wrong")
 	}
 
-	return ConvertAccountToUserProfileResponse(&account), nil
+	// TODO: Implement business logic
+	return ConvertAddressToDTO(old), nil
 }
 
-// LoginAdmin
+func (s *service) GetAddressByID(ctx context.Context, accountID uuid.UUID, addressID int64) (UserAddress, error) {
+	address, err := s.repo.FindAddressByIDAndAccountID(ctx, addressID, accountID)
+	if err != nil {
+		return UserAddress{}, apperror.New(http.StatusNotFound, "Not found")
+	}
+	return ConvertAddressToDTO(address), nil
+}
+
+func (s *service) GetAddressesByUserID(ctx context.Context, userID uuid.UUID) ([]UserAddress, error) {
+	addresses, err := s.repo.FindAddressesByAccountID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperror.New(apperror.ErrCodeNotFound, "Not found")
+		}
+		return nil, err
+	}
+	return ConvertAddressesToDTO(addresses), nil
+}
+
+func (s *service) DeleteAddress(ctx context.Context, userID uuid.UUID, addressID int64) error {
+	err := s.repo.DeleteAddress(ctx, addressID, userID)
+	if err != nil {
+		return apperror.New(apperror.ErrCodeInternal, "Something wong...")
+	}
+	return nil
+}
+
+func (s *service) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, addressID int64) error {
+	err := s.repo.SetPrimaryAddress(ctx, accountID, addressID)
+	if err != nil {
+		return apperror.New(apperror.ErrCodeInternal, "Something wrong")
+	}
+	return nil
+}
+
+// ---- TO-DO ------
 func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
 	var acc model.Account
 	var err error
@@ -262,47 +346,6 @@ func (s *service) GetUserProfile(ctx context.Context, userID int64) (model.Accou
 	// TODO: Implement business logic
 	return model.Account{}, nil
 }
-
-// --- Address Management ---
-
-func (s *service) AddAddress(ctx context.Context, userID uuid.UUID, req AddAddressRequest) (model.Address, error) {
-	address := NewAddressFromRequest(userID, req, false)
-
-	address, err := s.repo.SaveAddress(ctx, address)
-
-	if err != nil {
-		return model.Address{}, err
-	}
-
-	address, err = s.repo.SaveAddress(ctx, address)
-
-	if err != nil {
-		return model.Address{}, err
-	}
-	return address, nil
-}
-
-func (s *service) GetAddressesByUserID(ctx context.Context, userID int64) ([]model.Address, error) {
-	// TODO: Implement business logic
-	return nil, nil
-}
-
-func (s *service) UpdateAddress(ctx context.Context, userID, addressID int64, req model.Address) (model.Address, error) {
-	// TODO: Implement business logic
-	return model.Address{}, nil
-}
-
-func (s *service) DeleteAddress(ctx context.Context, userID, addressID int64) error {
-	// TODO: Implement business logic
-	return nil
-}
-
-func (s *service) SetPrimaryAddress(ctx context.Context, userID, addressID int64) error {
-	// TODO: Implement business logic
-	return nil
-}
-
-// --- Wishlist Management ---
 
 func (s *service) AddToWishlist(ctx context.Context, userID, productID int64) error {
 	// TODO: Implement business logic

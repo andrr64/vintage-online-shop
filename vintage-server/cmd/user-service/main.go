@@ -56,8 +56,13 @@ func main() {
 					protected.POST("/logout", userHandler.Logout)
 					protected.PUT("/update-profile", userHandler.UpdateProfile)
 					protected.PUT("/update-avatar", userHandler.UpdateAvatar)
-					
+
 					protected.POST("/address", userHandler.CreateAddress)
+					protected.PUT("/address", userHandler.UpdateAddress)
+					protected.GET("/address", userHandler.GetAllData)
+					protected.DELETE("/address", userHandler.DeleteAddress)
+
+					protected.PUT("/address/set-primary", userHandler.SetPrimaryAddress)
 				}
 			}
 

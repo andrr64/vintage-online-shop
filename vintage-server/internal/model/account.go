@@ -38,6 +38,7 @@ type Address struct {
 	DistrictID     string    `json:"district_id" db:"district_id"`
 	RegencyID      string    `json:"regency_id" db:"regency_id"`
 	ProvinceID     string    `json:"province_id" db:"province_id"`
+	VillageID      string    `json:"village_id" db:"village_id"`
 	Label          string    `json:"label" db:"label"`
 	RecipientName  string    `json:"recipient_name" db:"recipient_name"`
 	RecipientPhone string    `json:"recipient_phone" db:"recipient_phone"`

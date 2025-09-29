@@ -17,6 +17,22 @@ type WishlistItemDetail struct {
 	AddedAt         time.Time `json:"added_at" `
 }
 
+type UserAddress struct {
+	ID             int64     `json:"id"`
+	Label          string    `json:"label"`
+	DistrictID     string    `json:"district_id"`
+	RegencyID      string    `json:"regency_id"`
+	ProvinceID     string    `json:"province_id"`
+	VillageID      string    `json:"village_id"`
+	RecipientName  string    `json:"recipient_name"`
+	RecipientPhone string    `json:"recipient_phone"`
+	Street         string    `json:"street"`
+	PostalCode     string    `json:"postal_code"`
+	IsPrimary      bool      `json:"is_primary"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 // -- REQUEST --
 type RegisterRequest struct {
 	Username  string  `json:"username" binding:"required"`
@@ -31,10 +47,12 @@ type UpdateProfileRequest struct {
 	Lastname  *string `json:"lastname"`
 }
 
+
 type AddAddressRequest struct {
 	DistrictID     string `json:"district_id"`
 	RegencyID      string `json:"regency_id"`
 	ProvinceID     string `json:"province_id"`
+	VillageID      string `json:"village_id"`
 	Label          string `json:"label"`
 	RecipientName  string `json:"recipient_name"`
 	RecipientPhone string `json:"recipient_phone"`
@@ -61,6 +79,10 @@ type LoginResponse struct {
 	UserProfile UserProfileResponse `json:"user"`
 }
 
+type AddressIdentifier struct {
+	AddressID int64`json:"address_id" binding:"required"`
+}
+
 // -- FUNCTIONS --
 
 func ConvertAccountToUserProfileResponse(acc *model.Account) UserProfileResponse {
@@ -84,6 +106,7 @@ func NewAddressFromRequest(accountID uuid.UUID, req AddAddressRequest, isPrimary
 		DistrictID:     req.DistrictID,
 		RegencyID:      req.RegencyID,
 		ProvinceID:     req.ProvinceID,
+		VillageID:      req.VillageID,
 		Label:          req.Label,
 		RecipientName:  req.RecipientName,
 		RecipientPhone: req.RecipientPhone,
@@ -93,4 +116,30 @@ func NewAddressFromRequest(accountID uuid.UUID, req AddAddressRequest, isPrimary
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
+}
+
+func ConvertAddressToDTO(addr model.Address) UserAddress {
+	return UserAddress{
+		ID:             addr.ID,
+		Label:          addr.Label,
+		DistrictID:     addr.DistrictID,
+		RegencyID:      addr.RegencyID,
+		ProvinceID:     addr.ProvinceID,
+		VillageID:      addr.VillageID,
+		RecipientName:  addr.RecipientName,
+		RecipientPhone: addr.RecipientPhone,
+		Street:         addr.Street,
+		PostalCode:     addr.PostalCode,
+		IsPrimary:      addr.IsPrimary,
+		CreatedAt:      addr.CreatedAt,
+		UpdatedAt:      addr.UpdatedAt,
+	}
+}
+
+func ConvertAddressesToDTO(addresses []model.Address) []UserAddress {
+	result := make([]UserAddress, len(addresses))
+	for i, addr := range addresses {
+		result[i] = ConvertAddressToDTO(addr)
+	}
+	return result
 }

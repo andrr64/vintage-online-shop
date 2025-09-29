@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"vintage-server/pkg/apperror" // Path ke package error kustom kita
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response" // Path ke package error kustom kita
@@ -147,6 +148,7 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 	response.Success(c, http.StatusOK, res)
 }
 
+// -- ADDRESS MANAGEMENT --
 func (h *Handler) CreateAddress(c *gin.Context) {
 	var address AddAddressRequest
 	if err := c.ShouldBindJSON(&address); err != nil {
@@ -170,6 +172,89 @@ func (h *Handler) CreateAddress(c *gin.Context) {
 	}
 	response.Success(c, http.StatusCreated, res)
 }
+
+func (h *Handler) GetAllData(c *gin.Context) {
+	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
+	if err != nil || role == nil {
+		response.Error(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	addressIDStr := c.Query("id")
+	if addressIDStr == "" {
+		// Kalau addressId tidak ada → ambil semua alamat
+		addresses, err := h.svc.GetAddressesByUserID(c.Request.Context(), accountID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Not found")
+			return
+		}
+		response.Success(c, http.StatusOK, addresses)
+	} else {
+		// Convert string ke int64
+		addressID, err := strconv.ParseInt(addressIDStr, 10, 64)
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid addressId")
+			return
+		}
+
+		// Ambil address spesifik
+		address, err := h.svc.GetAddressByID(c.Request.Context(), accountID, addressID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Not found")
+			return
+		}
+		response.Success(c, http.StatusOK, address)
+	}
+}
+
+func (h *Handler) UpdateAddress(c *gin.Context) {
+
+}
+
+func (h *Handler) DeleteAddress(c *gin.Context) {
+	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
+	if err != nil || role == nil {
+		response.Error(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	var req AddressIdentifier
+	if err = c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c)
+	}
+	err = h.svc.DeleteAddress(c.Request.Context(), accountID, req.AddressID)
+	if err != nil {
+		response.ErrorInternalServer(c, "Something wrong in server-side")
+	}
+	response.SuccessWithoutData(c, http.StatusOK, "OK")
+}
+
+func (h *Handler) SetPrimaryAddress(c *gin.Context) {
+	var req AddressIdentifier
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c, "Invalid Request")
+		return
+	}
+	accountId, role, err := helper.ExtractAccountInfoFromToken(c)
+
+	if err != nil {
+		response.ErrorUnauthorized(c, "Unauthorized.")
+		return
+	}
+
+	if *role != "customer" {
+		response.ErrorUnauthorized(c, "Unauthorized.")
+		return
+	}
+
+	if h.svc.SetPrimaryAddress(c, accountId, req.AddressID) != nil {
+		response.ErrorInternalServer(c, "Someting wrong when i try to saving.")
+		return
+	}
+	response.SuccessWithoutData(c, http.StatusOK, "Updated successfully")
+}
+
+// --------------------------------------
 
 func (h *Handler) Logout(c *gin.Context) {
 	accountIDv, exists := c.Get("accountID")
