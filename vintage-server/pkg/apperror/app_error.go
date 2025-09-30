@@ -1,7 +1,12 @@
 // File: pkg/errors/app_error.go
 package apperror
 
-import "net/http"
+import (
+	"database/sql"
+	"errors"
+	"log"
+	"net/http"
+)
 
 const (
 	// ErrCodeValidation - 400 Bad Request
@@ -49,4 +54,22 @@ func New(code int, message string) error {
 		Code:    code,
 		Message: message,
 	}
+}
+
+func HandleDBError(err error, logContext string) error {
+	// Jika tidak ada error, kembalikan nil.
+	if err == nil {
+		return nil
+	}
+
+	// Jika error adalah sql.ErrNoRows, kita kembalikan error "NotFound".
+	// Nanti di service layer, ini bisa diubah lagi jika perlu (misal: menjadi Unauthorized).
+	if errors.Is(err, sql.ErrNoRows) {
+		return New(ErrCodeNotFound, "resource not found")
+	}
+
+	// Untuk semua error database lainnya, kita catat error teknisnya...
+	log.Printf("%s: %v", logContext, err)
+	// ...dan kembalikan error internal yang generik ke user.
+	return New(ErrCodeInternal, "an internal error occurred")
 }

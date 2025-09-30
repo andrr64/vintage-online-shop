@@ -11,15 +11,17 @@ import (
 // Config adalah struct yang akan menampung semua konfigurasi aplikasi.
 // Tag `mapstructure` digunakan oleh Viper untuk memetakan nama variabel.
 type Config struct {
-	DBHost          string `mapstructure:"DB_HOST"`
-	DBPort          int    `mapstructure:"DB_PORT"`
-	DBUser          string `mapstructure:"DB_USER"`
-	DBPassword      string `mapstructure:"DB_PASSWORD"`
-	DBName          string `mapstructure:"DB_NAME"`
-	DBSSLMode       string `mapstructure:"DB_SSLMODE"`
-	UserServicePort int    `mapstructure:"USER_SERVICE_PORT"`
-	JWTSecretKey    string `mapstructure:"JWT_SECRET_KEY"`
-	CloudinaryURL   string `mapstructure:"CLOUDINARY_URL"`
+	DBHost        string `mapstructure:"DB_HOST"`
+	DBPort        int    `mapstructure:"DB_PORT"`
+	DBUser        string `mapstructure:"DB_USER"`
+	DBPassword    string `mapstructure:"DB_PASSWORD"`
+	DBName        string `mapstructure:"DB_NAME"`
+	DBSSLMode     string `mapstructure:"DB_SSLMODE"`
+	JWTSecretKey  string `mapstructure:"JWT_SECRET_KEY"`
+	CloudinaryURL string `mapstructure:"CLOUDINARY_URL"`
+
+	UserServicePort    string `mapstructure:"USER_SERVICE_PORT"`
+	ProductServicePort string `mapstructure:"PRODUCT_SERVICE_PORT"`
 }
 
 // DSN (Data Source Name) mengembalikan connection string untuk database.
@@ -47,9 +49,10 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("DB_PASSWORD")
 	viper.BindEnv("DB_NAME")
 	viper.BindEnv("DB_SSLMODE")
-	viper.BindEnv("USER_SERVICE_PORT")
 	viper.BindEnv("JWT_SECRET_KEY")
 	viper.BindEnv("CLOUDINARY_URL")
+	viper.BindEnv("PRODUCT_SERVICE_PORT")
+	viper.BindEnv("USER_SERVICE_PORT")
 
 	// Unmarshal semua konfigurasi yang ditemukan ke dalam struct Config
 	err = viper.Unmarshal(&config)
