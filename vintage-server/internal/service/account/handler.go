@@ -7,6 +7,7 @@ import (
 	"vintage-server/pkg/apperror"
 	"vintage-server/pkg/response"
 	"vintage-server/pkg/utils"
+	"vintage-server/pkg/helper"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -71,7 +72,7 @@ func (h *Handler) LoginCustomer(c *gin.Context) {
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	// Gunakan helper untuk otentikasi dan otorisasi role "customer"
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -93,7 +94,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 func (h *Handler) UpdateAvatar(c *gin.Context) {
 	// Hanya perlu memastikan user sudah login, role tidak spesifik
-	accountID, err := checkAuthAndRole(c)
+	accountID, err := helper.CheckAuthAndRole(c)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -130,7 +131,7 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 // -- ADDRESS MANAGEMENT --
 
 func (h *Handler) CreateAddress(c *gin.Context) {
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -151,7 +152,7 @@ func (h *Handler) CreateAddress(c *gin.Context) {
 }
 
 func (h *Handler) GetAddresses(c *gin.Context) {
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -184,7 +185,7 @@ func (h *Handler) GetAddresses(c *gin.Context) {
 }
 
 func (h *Handler) UpdateAddress(c *gin.Context) {
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -205,7 +206,7 @@ func (h *Handler) UpdateAddress(c *gin.Context) {
 }
 
 func (h *Handler) DeleteAddress(c *gin.Context) {
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -227,7 +228,7 @@ func (h *Handler) DeleteAddress(c *gin.Context) {
 }
 
 func (h *Handler) SetPrimaryAddress(c *gin.Context) {
-	accountID, err := checkAuthAndRole(c, "customer")
+	accountID, err := helper.CheckAuthAndRole(c, "customer")
 	if err != nil {
 		h.handleError(c, err)
 		return

@@ -34,7 +34,6 @@ type AccountHandler interface {
 	SetPrimaryAddress(c *gin.Context)
 }
 
-
 // =================================================================================
 // KONTRAK UNTUK SERVICE (Logika Bisnis) 🧠
 // =================================================================================
@@ -60,7 +59,7 @@ type Service interface {
 	// Usecase: CustomerManage Addresses
 	AddAddress(ctx context.Context, userID uuid.UUID, req AddAddressRequest) (UserAddress, error)
 	GetAddressesByUserID(ctx context.Context, userID uuid.UUID) ([]UserAddress, error)
-	UpdateAddress(ctx context.Context, userID uuid.UUID,  address UserAddress) (UserAddress, error)
+	UpdateAddress(ctx context.Context, userID uuid.UUID, address UserAddress) (UserAddress, error)
 	DeleteAddress(ctx context.Context, userID uuid.UUID, addressID int64) error
 	GetAddressByID(ctx context.Context, userID uuid.UUID, addressId int64) (UserAddress, error)
 
