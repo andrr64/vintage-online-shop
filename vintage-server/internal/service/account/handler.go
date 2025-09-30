@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 	"vintage-server/pkg/apperror"
+	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 	"vintage-server/pkg/utils"
-	"vintage-server/pkg/helper"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -22,7 +22,6 @@ type Handler struct {
 func NewHandler(svc Service) AccountHandler {
 	return &Handler{svc: svc}
 }
-
 
 // handleError adalah helper internal untuk menangani error dari service secara konsisten
 func (h *Handler) handleError(c *gin.Context, err error) {
@@ -277,6 +276,11 @@ func (h *Handler) Logout(c *gin.Context) {
 func (h *Handler) LoginAdmin(c *gin.Context) {
 	var req LoginRequest
 
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c)
+		return
+	}
+
 	loginResponse, err := h.svc.LoginAdmin(c.Request.Context(), req)
 
 	if err != nil {
@@ -302,7 +306,7 @@ func (h *Handler) LoginAdmin(c *gin.Context) {
 }
 
 func (h *Handler) LoginSeller(c *gin.Context) {
-		var req LoginRequest
+	var req LoginRequest
 
 	loginResponse, err := h.svc.LoginSeller(c.Request.Context(), req)
 

@@ -71,7 +71,7 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 		UpdatedAt: time.Now(),
 	}
 
-	createdAcc, err := s.repo.SaveAccount(ctx, newAccount, "customer")
+	createdAcc, err := s.repo.SaveAccount(ctx, newAccount, "admin")
 	if err != nil {
 		log.Printf("Error saving account: %v", err)
 		return UserProfileResponse{}, apperror.New(apperror.ErrCodeInternal, "failed to create account")
