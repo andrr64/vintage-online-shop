@@ -1,0 +1,39 @@
+# =======================================================
+# Konfigurasi Air untuk Hot-Reloading Proyek Go Monorepo
+# =======================================================
+
+# Direktori root proyek di dalam container.
+# Air akan menjalankan perintah dari direktori ini.
+root = "/app"
+
+# Direktori untuk menyimpan file binary hasil kompilasi.
+tmp_dir = "tmp"
+
+[build]
+  # Perintah untuk meng-compile service.
+  # Menggunakan environment variable ${SERVICE_NAME} yang di-set dari docker-compose.
+  cmd = "go build -o ./tmp/${SERVICE_NAME} ./cmd/${SERVICE_NAME}"
+
+  # File binary yang akan dijalankan setelah kompilasi berhasil.
+  bin = "./tmp/${SERVICE_NAME}"
+
+  # File/folder yang ingin di-watch untuk perubahan.
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  
+  # Folder yang ingin diabaikan (jangan di-watch).
+  exclude_dir = ["assets", "tmp", "vendor"]
+  
+  # File untuk menyimpan log error build.
+  log = "air_errors.log"
+
+  # Mengaktifkan mode polling agar andal di dalam Docker (terutama di Windows/Mac).
+  poll = true
+  poll_interval = "500ms"
+
+[log]
+  # Tampilkan waktu di log.
+  time = true
+
+[misc]
+  # Hapus file temporary saat Air dihentikan.
+  clean_on_exit = true

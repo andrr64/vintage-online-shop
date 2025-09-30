@@ -1,0 +1,20 @@
+# Mulai dari image golang yang lengkap, bukan alpine yang minimalis
+FROM golang:1.25-alpine
+
+# Set direktori kerja
+WORKDIR /app
+
+# BENAR
+RUN go install github.com/air-verse/air@latest
+
+# Salin file dependensi dari root
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Salin semua source code
+# Di compose file, kita akan menimpanya dengan volume agar bisa live-reload
+COPY . .
+
+# Perintah default untuk menjalankan Air
+# Air akan membaca konfigurasi dari file .air.toml
+CMD ["air"]
