@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"vintage-server/internal/model" // Sesuaikan path
+	"vintage-server/pkg/apperror"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -267,33 +268,36 @@ func (r *repository) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID,
 			_ = tx.Rollback()
 			panic(p)
 		} else if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Commit()
 		} else {
-			err = tx.Commit()
+			_ = tx.Commit()
 		}
 	}()
-
-	// 1. cari yang saat ini primary
+	var exists bool
+	queryCheck := `SELECT EXISTS(
+		SELECT 1 FROM addresses where id = $1 AND account_id = $2
+	)`
+	if err = tx.GetContext(ctx, &exists, queryCheck, addressID, accountID); err != nil {
+		return err
+	}
+	if !exists {
+		return apperror.New(apperror.ErrCodeNotFound, "Data tidak ditemukan")
+	}
 	var currentPrimaryID int64
 	querySelect := `SELECT id FROM addresses WHERE account_id = $1 AND is_primary = true LIMIT 1`
 	if err = tx.GetContext(ctx, &currentPrimaryID, querySelect, accountID); err != nil && err != sql.ErrNoRows {
-		fmt.Println(err)
 		return err
 	}
-
 	// 2. jika idnya beda, update yang lama jadi false
-	if currentPrimaryID != addressID {
+	if currentPrimaryID != 0 && currentPrimaryID != addressID {
 		queryUnset := `UPDATE addresses SET is_primary = false WHERE id = $1 AND account_id = $2`
 		if _, err = tx.ExecContext(ctx, queryUnset, currentPrimaryID, accountID); err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
-
 	// 3. set primary baru
 	querySet := `UPDATE addresses SET is_primary = true WHERE id = $1 AND account_id = $2`
 	if _, err = tx.ExecContext(ctx, querySet, addressID, accountID); err != nil {
-		fmt.Println(err)
 		return err
 	}
 

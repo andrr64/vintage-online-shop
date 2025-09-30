@@ -289,7 +289,7 @@ func (s *service) DeleteAddress(ctx context.Context, userID uuid.UUID, addressID
 func (s *service) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, addressID int64) error {
 	err := s.repo.SetPrimaryAddress(ctx, accountID, addressID)
 	if err != nil {
-		return apperror.New(apperror.ErrCodeInternal, "Something wrong")
+		return apperror.New(apperror.ErrCodeInternal, err.Error())
 	}
 	return nil
 }

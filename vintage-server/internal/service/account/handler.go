@@ -247,8 +247,9 @@ func (h *Handler) SetPrimaryAddress(c *gin.Context) {
 		return
 	}
 
-	if h.svc.SetPrimaryAddress(c, accountId, req.AddressID) != nil {
-		response.ErrorInternalServer(c, "Someting wrong when i try to saving.")
+	err = h.svc.SetPrimaryAddress(c, accountId, req.AddressID)
+	if err != nil {
+		response.ErrorInternalServer(c, err.Error())
 		return
 	}
 	response.SuccessWithoutData(c, http.StatusOK, "Updated successfully")
