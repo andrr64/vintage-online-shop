@@ -7,6 +7,8 @@ const (
 	// ErrCodeValidation - 400 Bad Request
 	// Digunakan untuk error validasi input dari user.
 	ErrCodeValidation = http.StatusBadRequest
+	
+	ErrCodeBadRequest = http.StatusBadRequest
 
 	// ErrCodeUnauthorized - 401 Unauthorized
 	// Digunakan untuk kegagalan autentikasi (login gagal, token tidak valid).
