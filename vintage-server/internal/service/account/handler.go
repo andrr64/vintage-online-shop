@@ -17,10 +17,11 @@ type Handler struct {
 	svc Service
 }
 
-// NewHandler adalah constructor untuk handler
-func NewHandler(svc Service) *Handler {
+// Perhatikan bahwa return type-nya adalah interface, bukan struct-nya langsung.
+func NewHandler(svc Service) AccountHandler {
 	return &Handler{svc: svc}
 }
+
 
 // handleError adalah helper internal untuk menangani error dari service secara konsisten
 func (h *Handler) handleError(c *gin.Context, err error) {
@@ -246,10 +247,6 @@ func (h *Handler) SetPrimaryAddress(c *gin.Context) {
 	response.SuccessWithoutData(c, http.StatusOK, "primary address updated successfully")
 }
 
-// Logout, dll.
-// ... (Sisa fungsi lain seperti Logout dan LoginAdmin bisa mengikuti pola yang sama)
-// --------------------------------------
-
 func (h *Handler) Logout(c *gin.Context) {
 	accountIDv, exists := c.Get("accountID")
 	if !exists {
@@ -280,6 +277,33 @@ func (h *Handler) LoginAdmin(c *gin.Context) {
 	var req LoginRequest
 
 	loginResponse, err := h.svc.LoginAdmin(c.Request.Context(), req)
+
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			response.Error(c, appErr.Code, appErr.Message)
+		} else {
+			response.Error(c, http.StatusInternalServerError, "An unexpected error occurred")
+		}
+		return
+	}
+	c.SetCookie(
+		"access_token",
+		loginResponse.AccessToken,
+		3600*72, // 3 hari
+		"/",     // path
+		"",      // domain (atau kosong "")
+		false,   // secure (true kalau https)
+		true,    // httpOnly biar gak bisa diakses JS
+	)
+
+	response.Success(c, http.StatusOK, loginResponse)
+}
+
+func (h *Handler) LoginSeller(c *gin.Context) {
+		var req LoginRequest
+
+	loginResponse, err := h.svc.LoginSeller(c.Request.Context(), req)
 
 	if err != nil {
 		var appErr *apperror.AppError

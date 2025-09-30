@@ -276,8 +276,49 @@ func (s *service) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, ad
 	return nil
 }
 
-// -------- TO-DO ---------
+// Login as Seller
+func (s *service) LoginSeller(ctx context.Context, req LoginRequest) (LoginResponse, error) {
+	var acc model.Account
+	var err error
 
+	role := "seller"
+	if strings.Contains(req.Identifier, "@") {
+		acc, err = s.repo.FindAccountByEmailWithRole(ctx, req.Identifier, role)
+	} else {
+		acc, err = s.repo.FindAccountByUsernameWithRole(ctx, req.Identifier, role)
+	}
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return LoginResponse{}, apperror.New(
+				apperror.ErrCodeUnauthorized,
+				"Invalid Data",
+			)
+		}
+		log.Printf("Error finding account: %v", err) // Contoh logging
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Invalid Data")
+	}
+	err = hash.Verify(acc.Password, req.Password)
+	if err != nil {
+		return LoginResponse{}, apperror.New(
+			apperror.ErrCodeUnauthorized,
+			"Invalid Data",
+		)
+	}
+	access_token, err := s.jwt.GenerateToken(acc.ID, role)
+	if err != nil {
+		return LoginResponse{}, &apperror.AppError{
+			Code:    apperror.ErrCodeInternal,
+			Message: err.Error(),
+		}
+	}
+	return LoginResponse{
+		AccessToken: access_token,
+		UserProfile: ConvertAccountToUserProfileResponse(&acc),
+	}, nil
+
+}
+
+// Login as Admin
 func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
 	var acc model.Account
 	var err error
@@ -320,6 +361,7 @@ func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginRespon
 
 }
 
+// -------- TO-DO ---------
 func (s *service) DeactivateUser(ctx context.Context, userID int64, reason string) error {
 	// TODO: Implement business logic
 	return nil

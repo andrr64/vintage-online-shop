@@ -7,9 +7,33 @@ import (
 	"mime/multipart"
 	"vintage-server/internal/model" // Sesuaikan dengan path proyekmu
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
+
+// AccountHandler adalah kontrak atau interface yang mendefinisikan semua
+// fungsionalitas yang harus disediakan oleh handler akun.
+type AccountHandler interface {
+	// Authentication & Registration
+	RegisterCustomer(c *gin.Context)
+	LoginCustomer(c *gin.Context)
+	LoginAdmin(c *gin.Context)
+	LoginSeller(c *gin.Context)
+	Logout(c *gin.Context)
+
+	// Profile Management
+	UpdateProfile(c *gin.Context)
+	UpdateAvatar(c *gin.Context)
+
+	// Address Management
+	CreateAddress(c *gin.Context)
+	GetAddresses(c *gin.Context)
+	UpdateAddress(c *gin.Context)
+	DeleteAddress(c *gin.Context)
+	SetPrimaryAddress(c *gin.Context)
+}
+
 
 // =================================================================================
 // KONTRAK UNTUK SERVICE (Logika Bisnis) 🧠
@@ -24,6 +48,7 @@ type Service interface {
 	UpdateAvatar(ctx context.Context, userID uuid.UUID, file multipart.File) (UserProfileResponse, error)
 
 	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
+	LoginSeller(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
 	Logout(ctx context.Context, userId uuid.UUID) (string, error)
 
