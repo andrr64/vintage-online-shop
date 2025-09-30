@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"time"
@@ -47,7 +47,6 @@ type UpdateProfileRequest struct {
 	Lastname  *string `json:"lastname"`
 }
 
-
 type AddAddressRequest struct {
 	DistrictID     string `json:"district_id"`
 	RegencyID      string `json:"regency_id"`
@@ -80,7 +79,7 @@ type LoginResponse struct {
 }
 
 type AddressIdentifier struct {
-	AddressID int64`json:"address_id" binding:"required"`
+	AddressID int64 `json:"address_id" binding:"required"`
 }
 
 // -- FUNCTIONS --

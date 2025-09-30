@@ -1,12 +1,11 @@
-package user
+package account
 
 import (
 	"errors"
 	"net/http"
 	"strconv"
-	"vintage-server/pkg/apperror" // Path ke package error kustom kita
-	"vintage-server/pkg/helper"
-	"vintage-server/pkg/response" // Path ke package error kustom kita
+	"vintage-server/pkg/apperror"
+	"vintage-server/pkg/response"
 	"vintage-server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -23,125 +22,104 @@ func NewHandler(svc Service) *Handler {
 	return &Handler{svc: svc}
 }
 
+// handleError adalah helper internal untuk menangani error dari service secara konsisten
+func (h *Handler) handleError(c *gin.Context, err error) {
+	var appErr *apperror.AppError
+	if errors.As(err, &appErr) {
+		response.Error(c, appErr.Code, appErr.Message)
+	} else {
+		// Sembunyikan detail error internal dari client
+		response.Error(c, http.StatusInternalServerError, "an unexpected internal error occurred")
+	}
+}
+
 // RegisterCustomer adalah handler untuk use case pendaftaran customer
 func (h *Handler) RegisterCustomer(c *gin.Context) {
 	var req RegisterRequest
-
-	// 1. Bind & Validasi request body JSON ke DTO RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid request body")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// 2. Panggil service untuk menjalankan logika bisnis
 	userProfile, err := h.svc.RegisterCustomer(c.Request.Context(), req)
 	if err != nil {
-		// 3. Tangani error dari service menggunakan custom error kita
-		var appErr *apperror.AppError
-		if errors.As(err, &appErr) {
-			response.Error(c, appErr.Code, appErr.Message)
-		} else {
-			response.Error(c, http.StatusInternalServerError, "An unexpected error occurred")
-		}
+		h.handleError(c, err)
 		return
 	}
 
-	// 4. Sukses
 	response.Success(c, http.StatusCreated, userProfile)
 }
 
 // LoginCustomer adalah handler untuk use case login
 func (h *Handler) LoginCustomer(c *gin.Context) {
 	var req LoginRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	loginResponse, err := h.svc.LoginCustomer(c.Request.Context(), req)
 	if err != nil {
-		var appErr *apperror.AppError
-		if errors.As(err, &appErr) {
-			response.Error(c, 404, appErr.Message)
-		} else {
-			response.Error(c, 404, "An unexpected error occurred")
-		}
+		h.handleError(c, err)
 		return
 	}
 
-	c.SetCookie(
-		"access_token",
-		loginResponse.AccessToken,
-		3600*24, // 3 hari
-		"/",     // path
-		"",      // domain (atau kosong "")
-		false,   // secure (true kalau https)
-		true,    // httpOnly biar gak bisa diakses JS
-	)
+	c.SetCookie("access_token", loginResponse.AccessToken, 3600*24, "/", "", false, true)
 	response.Success(c, http.StatusOK, loginResponse)
 }
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
-	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
-	if err != nil || role == nil {
-		response.Error(c, http.StatusUnauthorized, err.Error())
+	// Gunakan helper untuk otentikasi dan otorisasi role "customer"
+	accountID, err := checkAuthAndRole(c, "customer")
+	if err != nil {
+		h.handleError(c, err)
 		return
 	}
 
-	if *role == "admin" {
-		response.Error(c, http.StatusForbidden, "Admin is not allowed to update profile here")
-		return
-	}
-
-	// Bind request body
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid request")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	res, err := h.svc.UpdateProfile(c.Request.Context(), accountID, req)
 	if err != nil {
-		response.Error(c, apperror.ErrCodeInternal, "Something wrong when we try to update your data")
+		h.handleError(c, err)
 		return
 	}
 	response.Success(c, http.StatusOK, res)
 }
 
 func (h *Handler) UpdateAvatar(c *gin.Context) {
-	accountID, _, err := helper.ExtractAccountInfoFromToken(c)
-
+	// Hanya perlu memastikan user sudah login, role tidak spesifik
+	accountID, err := checkAuthAndRole(c)
 	if err != nil {
-		response.Error(c, http.StatusUnauthorized, "Unauthorized")
+		h.handleError(c, err)
 		return
 	}
 
-	// ambil file dari request
 	fileHeader, err := c.FormFile("avatar")
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Avatar file is required")
+		response.Error(c, http.StatusBadRequest, "avatar file is required")
 		return
 	}
 
-	// validasi ukuran file (max 2MB)
-	if utils.SizeIsOk(fileHeader, utils.BytesToMegaBytes(2)) {
-		response.Error(c, http.StatusBadRequest, "File size must be less than 2MB")
+	// Perbaiki logika: SizeIsOk harusnya SizeIsNotOk atau if !SizeIsOk
+	if !utils.SizeIsOk(fileHeader, utils.BytesToMegaBytes(2)) {
+		response.Error(c, http.StatusBadRequest, "file size must be less than 2MB")
 		return
 	}
 
-	// buka file
 	file, err := fileHeader.Open()
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to open uploaded file")
+		response.Error(c, http.StatusInternalServerError, "failed to open uploaded file")
 		return
 	}
 	defer file.Close()
 
-	// panggil service
 	res, err := h.svc.UpdateAvatar(c.Request.Context(), accountID, file)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		h.handleError(c, err)
 		return
 	}
 
@@ -149,58 +127,55 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 }
 
 // -- ADDRESS MANAGEMENT --
+
 func (h *Handler) CreateAddress(c *gin.Context) {
-	var address AddAddressRequest
-	if err := c.ShouldBindJSON(&address); err != nil {
-		response.ErrorBadRequest(c)
-		return
-	}
-	accountId, role, err := helper.ExtractAccountInfoFromToken(c)
+	accountID, err := checkAuthAndRole(c, "customer")
 	if err != nil {
-		response.ErrorUnauthorized(c, err.Error())
-		return
-	}
-	if *role != "customer" {
-		response.ErrorForbidden(c)
+		h.handleError(c, err)
 		return
 	}
 
-	res, err := h.svc.AddAddress(c.Request.Context(), accountId, address)
+	var req AddAddressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	res, err := h.svc.AddAddress(c.Request.Context(), accountID, req)
 	if err != nil {
-		response.ErrorInternalServer(c, err.Error())
+		h.handleError(c, err)
 		return
 	}
 	response.Success(c, http.StatusCreated, res)
 }
 
-func (h *Handler) GetAllData(c *gin.Context) {
-	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
-	if err != nil || role == nil {
-		response.Error(c, http.StatusUnauthorized, err.Error())
+func (h *Handler) GetAddresses(c *gin.Context) {
+	accountID, err := checkAuthAndRole(c, "customer")
+	if err != nil {
+		h.handleError(c, err)
 		return
 	}
 
-	addressIDStr := c.Query("id")
+	addressIDStr := c.Param("addressId") // Ambil dari path, e.g., /addresses/123
 	if addressIDStr == "" {
-		// Kalau addressId tidak ada → ambil semua alamat
+		// Ambil semua alamat jika tidak ada ID
 		addresses, err := h.svc.GetAddressesByUserID(c.Request.Context(), accountID)
 		if err != nil {
-			response.Error(c, http.StatusNotFound, "Not found")
+			h.handleError(c, err)
 			return
 		}
 		response.Success(c, http.StatusOK, addresses)
 	} else {
-		// Convert string ke int64
+		// Ambil alamat spesifik jika ada ID
 		addressID, err := strconv.ParseInt(addressIDStr, 10, 64)
 		if err != nil {
-			response.Error(c, http.StatusBadRequest, "invalid addressId")
+			response.Error(c, http.StatusBadRequest, "invalid address ID format")
 			return
 		}
 
-		// Ambil address spesifik
 		address, err := h.svc.GetAddressByID(c.Request.Context(), accountID, addressID)
 		if err != nil {
-			response.Error(c, http.StatusNotFound, "Not found")
+			h.handleError(c, err)
 			return
 		}
 		response.Success(c, http.StatusOK, address)
@@ -208,53 +183,71 @@ func (h *Handler) GetAllData(c *gin.Context) {
 }
 
 func (h *Handler) UpdateAddress(c *gin.Context) {
+	accountID, err := checkAuthAndRole(c, "customer")
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
 
+	var req UserAddress
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	res, err := h.svc.UpdateAddress(c.Request.Context(), accountID, req)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, res)
 }
 
 func (h *Handler) DeleteAddress(c *gin.Context) {
-	accountID, role, err := helper.ExtractAccountInfoFromToken(c)
-	if err != nil || role == nil {
-		response.Error(c, http.StatusUnauthorized, err.Error())
+	accountID, err := checkAuthAndRole(c, "customer")
+	if err != nil {
+		h.handleError(c, err)
 		return
 	}
 
-	var req AddressIdentifier
-	if err = c.ShouldBindJSON(&req); err != nil {
-		response.ErrorBadRequest(c)
-	}
-	err = h.svc.DeleteAddress(c.Request.Context(), accountID, req.AddressID)
+	addressIDStr := c.Param("addressId")
+	addressID, err := strconv.ParseInt(addressIDStr, 10, 64)
 	if err != nil {
-		response.ErrorInternalServer(c, "Something wrong in server-side")
+		response.Error(c, http.StatusBadRequest, "invalid address ID format")
+		return
 	}
-	response.SuccessWithoutData(c, http.StatusOK, "OK")
+
+	err = h.svc.DeleteAddress(c.Request.Context(), accountID, addressID)
+	if err != nil {
+		h.handleError(c, err)
+		return // Pastikan ada return setelah error
+	}
+	response.SuccessWithoutData(c, http.StatusOK, "address deleted successfully")
 }
 
 func (h *Handler) SetPrimaryAddress(c *gin.Context) {
+	accountID, err := checkAuthAndRole(c, "customer")
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
 	var req AddressIdentifier
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrorBadRequest(c, "Invalid Request")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	accountId, role, err := helper.ExtractAccountInfoFromToken(c)
 
+	err = h.svc.SetPrimaryAddress(c.Request.Context(), accountID, req.AddressID)
 	if err != nil {
-		response.ErrorUnauthorized(c, "Unauthorized.")
+		h.handleError(c, err)
 		return
 	}
-
-	if *role != "customer" {
-		response.ErrorUnauthorized(c, "Unauthorized.")
-		return
-	}
-
-	err = h.svc.SetPrimaryAddress(c, accountId, req.AddressID)
-	if err != nil {
-		response.ErrorInternalServer(c, err.Error())
-		return
-	}
-	response.SuccessWithoutData(c, http.StatusOK, "Updated successfully")
+	response.SuccessWithoutData(c, http.StatusOK, "primary address updated successfully")
 }
 
+// Logout, dll.
+// ... (Sisa fungsi lain seperti Logout dan LoginAdmin bisa mengikuti pola yang sama)
 // --------------------------------------
 
 func (h *Handler) Logout(c *gin.Context) {

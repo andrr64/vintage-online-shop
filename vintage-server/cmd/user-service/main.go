@@ -59,7 +59,7 @@ func main() {
 
 					protected.POST("/address", userHandler.CreateAddress)
 					protected.PUT("/address", userHandler.UpdateAddress)
-					protected.GET("/address", userHandler.GetAllData)
+					protected.GET("/address", userHandler.GetAddresses)
 					protected.DELETE("/address", userHandler.DeleteAddress)
 
 					protected.PUT("/address/set-primary", userHandler.SetPrimaryAddress)

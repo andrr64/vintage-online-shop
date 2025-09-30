@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"context"
@@ -198,8 +198,8 @@ func (s *service) AddAddress(ctx context.Context, accountID uuid.UUID, req AddAd
 }
 
 // UpdateAddress updates an existing user address.
-func (s *service) UpdateAddress(ctx context.Context, accountId uuid.UUID, addressID int64, req UserAddress) (UserAddress, error) {
-	old, err := s.repo.FindAddressByIDAndAccountID(ctx, addressID, accountId)
+func (s *service) UpdateAddress(ctx context.Context, accountId uuid.UUID, req UserAddress) (UserAddress, error) {
+	old, err := s.repo.FindAddressByIDAndAccountID(ctx, req.ID, accountId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return UserAddress{}, apperror.New(apperror.ErrCodeNotFound, "address not found")

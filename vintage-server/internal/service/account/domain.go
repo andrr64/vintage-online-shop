@@ -1,4 +1,4 @@
-package user
+package account
 
 // File: internal/service/user/domain.go
 
@@ -35,7 +35,7 @@ type Service interface {
 	// Usecase: CustomerManage Addresses
 	AddAddress(ctx context.Context, userID uuid.UUID, req AddAddressRequest) (UserAddress, error)
 	GetAddressesByUserID(ctx context.Context, userID uuid.UUID) ([]UserAddress, error)
-	UpdateAddress(ctx context.Context, userID uuid.UUID, addressID int64, address UserAddress) (UserAddress, error)
+	UpdateAddress(ctx context.Context, userID uuid.UUID,  address UserAddress) (UserAddress, error)
 	DeleteAddress(ctx context.Context, userID uuid.UUID, addressID int64) error
 	GetAddressByID(ctx context.Context, userID uuid.UUID, addressId int64) (UserAddress, error)
 
@@ -75,7 +75,7 @@ type Repository interface {
 	SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, addressID int64) error
 	FindAddressesByAccountID(ctx context.Context, accountID uuid.UUID) ([]model.Address, error)
 	FindAddressByIDAndAccountID(ctx context.Context, addressID int64, accountID uuid.UUID) (model.Address, error)
-	UpdateAddress(ctx context.Context,accound_id uuid.UUID, address model.Address) (model.Address, error)
+	UpdateAddress(ctx context.Context, accound_id uuid.UUID, address model.Address) (model.Address, error)
 	DeleteAddress(ctx context.Context, addressID int64, accountID uuid.UUID) error
 
 	// TransactionSetPrimaryAddress akan menangani 2 query (unset old, set new) dalam satu transaksi DB
