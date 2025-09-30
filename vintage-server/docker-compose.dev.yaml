@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Database tetap sama seperti sebelumnya
+  db:
+    image: postgres:15-alpine
+    container_name: vintage-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vintage-net
+
+  # -- SERVICE MIGRATOR
+  migrator:
+    image: migrate/migrate
+    container_name: migrator-dev
+    networks:
+      - vintage-net
+    volumes:
+      - ./migrations:/migrations
+    # Perintah ini akan menjalankan semua file *.up.sql yang belum pernah dijalankan
+    command: ["-path", "/migrations", "-database", "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable", "up"]
+    depends_on:
+      - db
+  # Account Service untuk DEVELOPMENT
+  account-service:
+    build:
+      context: .
+      # Gunakan Dockerfile khusus development
+      dockerfile: ./cmd/account-service/Dockerfile.dev
+    container_name: account-service-dev
+    restart: unless-stopped
+    ports:
+      - "8081:8080" # Port tetap sama atau bisa diubah
+    volumes:
+      - .:/app
+    # --- PERIKSA DAN PERBAIKI BAGIAN INI ---
+    environment:
+      SERVICE_NAME: account-service
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: disable
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      CLOUDINARY_URL: ${CLOUDINARY_URL}
+    
+    # ----------------------------------------
+    depends_on:
+      - db
+    networks:
+      - vintage-net
+      
+    # Override CMD untuk menjalankan HANYA service ini
+    # Air akan mencari main.go di dalam cmd/account-service
+    command: air 
+
+  product-service:
+    build:
+      context: .
+      dockerfile: ./cmd/product-service/Dockerfile.dev
+    container_name: product-service-dev
+    restart: unless-stopped
+    ports:
+      - "8082:8080" # Port tetap sama atau bisa diubah
+    volumes:
+      - .:/app
+    environment:
+        SERVICE_NAME: product-service
+        DB_HOST: db
+        DB_PORT: 5432
+        DB_USER: ${DB_USER}
+        DB_PASSWORD: ${DB_PASSWORD}
+        DB_NAME: ${DB_NAME}
+        DB_SSLMODE: disable
+        JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+        CLOUDINARY_URL: ${CLOUDINARY_URL}
+      
+    depends_on:
+      - db
+    networks:
+      - vintage-net
+    command: air
+volumes:
+  postgres-data:
+
+networks:
+  vintage-net:
+    driver: bridge

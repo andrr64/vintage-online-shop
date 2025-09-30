@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # 📦 SERVICE DATABASE
+  db:
+    image: postgres:15-alpine
+    container_name: vintage-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vintage-net
+
+# ------------------- SERVICE APLIKASI -------------------
+  # ------------------- SERVICE MIGRASI -------------------
+  migrator:
+    image: migrate/migrate
+    container_name: migrator-dev
+    networks:
+      - vintage-net
+    volumes:
+      - ./migrations:/migrations
+    # Perintah ini akan menjalankan semua file *.up.sql yang belum pernah dijalankan
+    command: ["-path", "/migrations", "-database", "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable", "up"]
+    depends_on:
+      - db
+
+  # 🔗 ACCOUNT SERVICE
+  account-service:
+    build:
+      context: . # Konteks build adalah root proyek
+      dockerfile: ./cmd/account-service/Dockerfile # Path ke Dockerfile-nya
+      args:
+        # Kirim nama service sebagai build argument ke Dockerfile
+        SERVICE_NAME: account-service 
+    container_name: account-service
+    restart: unless-stopped
+    ports:
+      - "8081:8080" # Host Port:Container Port
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - CLOUDINARY_URL=${CLOUDINARY_URL}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=disable
+      - USER_SERVICE_PORT=8080 # Port internal yang digunakan di kode Go
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    depends_on:
+      - db
+    networks:
+      - vintage-net
+
+# Deklarasi volume untuk data database
+volumes:
+  postgres-test:
+    external: true
+    
+# Deklarasi network bersama untuk semua service
+networks:
+  vintage-net:
+    driver: bridge
