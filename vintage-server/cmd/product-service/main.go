@@ -35,12 +35,17 @@ func main() {
 		log.Fatalf("Failed to connect to Cloudinary service: %v", err)
 		return
 	}
-
-	productRepo := product.NewRepository(db)
-	productService := product.NewService(productRepo, cfg.JWTSecretKey, cloudinaryService)
-	productHandler := product.NewHandler(productService)
+	// 1. Buat instance JWT service terlebih dahulu
 	authService := auth.NewJWTService(cfg.JWTSecretKey)
 
+	// 2. Buat instance repository
+	productRepo := product.NewRepository(db)
+
+	// 3. Suntikkan (inject) repository dan authService ke dalam product service
+	productService := product.NewService(productRepo, *authService, cloudinaryService)
+
+	// 4. Suntikkan product service ke dalam handler
+	productHandler := product.NewHandler(productService)
 	router := gin.Default()
 
 	api := router.Group("/api/v1")
