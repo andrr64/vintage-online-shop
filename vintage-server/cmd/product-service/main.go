@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"log"
+	"vintage-server/internal/database"
 	"vintage-server/internal/service/product"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
@@ -13,7 +14,6 @@ import (
 	"vintage-server/pkg/uploader"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 	}
 
 	// 2. Koneksi Database menggunakan config
-	db, err := sqlx.Connect("postgres", cfg.DSN())
+	db, err := database.NewPostgres(cfg.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 		return

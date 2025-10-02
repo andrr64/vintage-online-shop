@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 	"vintage-server/internal/model"
 	"vintage-server/pkg/apperror"
 
@@ -22,8 +23,17 @@ func NewRepository(db *sqlx.DB) Repository {
 	}
 }
 
+const defaultQueryTimeout = 3 * time.Second
+
+func (r *repository) withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, defaultQueryTimeout)
+}
+
 // --- CATEGORY MANAGEMENT ---
 func (r *repository) CreateCategory(ctx context.Context, data model.ProductCategory) error {
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
+
 	query := `INSERT INTO product_categories (name) VALUES ($1)`
 
 	_, err := r.db.ExecContext(ctx, query, data.Name)
@@ -37,31 +47,56 @@ func (r *repository) CreateCategory(ctx context.Context, data model.ProductCateg
 }
 
 func (r *repository) FindAllCategories(ctx context.Context) ([]model.ProductCategory, error) {
-	query := `SELECT id, name, created_at, updated_at FROM product_categories ORDER BY created_at DESC`
-	var result []model.ProductCategory
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
 
-	err := r.db.SelectContext(ctx, &result, query)
-	if err != nil {
+	query := `
+		SELECT c.id, c.name, c.created_at, c.updated_at,
+		       COUNT(p.id) AS product_count
+		FROM product_categories c
+		LEFT JOIN products p ON p.category_id = c.id
+		GROUP BY c.id
+		ORDER BY c.created_at DESC
+	`
+
+	var result []model.ProductCategory
+	if err := r.db.SelectContext(ctx, &result, query); err != nil {
 		return nil, apperror.HandleDBError(err, "failed to find all categories")
 	}
 	return result, nil
 }
 
 func (r *repository) FindById(ctx context.Context, id int) (model.ProductCategory, error) {
-	var result model.ProductCategory
-	query := `SELECT id, name, created_at, updated_at FROM product_categories WHERE id = $1`
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
 
+	var result model.ProductCategory
+	query := `
+		SELECT id, name, created_at, updated_at
+		FROM product_categories
+		WHERE id = $1
+	`
 	err := r.db.GetContext(ctx, &result, query, id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ProductCategory{}, apperror.New(apperror.ErrCodeNotFound, "category not found")
+		}
 		return model.ProductCategory{}, apperror.HandleDBError(err, "failed to find product category by id")
 	}
 	return result, nil
 }
 
 func (r *repository) UpdateCategory(ctx context.Context, data model.ProductCategory) error {
-	query := `UPDATE product_categories SET name = $1, updated_at = NOW() WHERE id = $2`
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
 
-	result, err := r.db.ExecContext(ctx, query, data.Name, data.ID)
+	query := `
+		UPDATE product_categories
+		SET name = $1, updated_at = NOW()
+		WHERE id = $2 AND updated_at = $3
+	`
+
+	result, err := r.db.ExecContext(ctx, query, data.Name, data.ID, data.UpdatedAt)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return apperror.New(apperror.ErrCodeConflict, "category name is already in use by another category")
@@ -71,25 +106,55 @@ func (r *repository) UpdateCategory(ctx context.Context, data model.ProductCateg
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return apperror.New(apperror.ErrCodeNotFound, "category not found for update")
+		return apperror.New(apperror.ErrCodeConflict, "category was modified by another process or not found")
 	}
 	return nil
 }
 
 func (r *repository) CountProductsByCategory(ctx context.Context, categoryID int) (int, error) {
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
+
 	var count int
-	query := `SELECT COUNT(*) FROM products WHERE category_id = $1`
+	query := "SELECT COUNT(*) FROM product_categories WHERE category_id = $1"
 	err := r.db.GetContext(ctx, &count, query, categoryID)
 	if err != nil {
-		return 0, err
+		return 0, apperror.HandleDBError(err, "failed to count products by category")
 	}
 	return count, nil
 }
 
 func (r *repository) DeleteCategory(ctx context.Context, categoryID int) error {
-	query := `DELETE FROM product_categories WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, categoryID)
-	return err
+	ctx, cancel := r.withTimeout(ctx)
+	defer cancel()
+
+	tx, err := r.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return apperror.HandleDBError(err, "failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	var count int
+	if err := tx.GetContext(ctx, &count, `SELECT COUNT(*) FROM products WHERE category_id = $1`, categoryID); err != nil {
+		return apperror.HandleDBError(err, "failed to check product count")
+	}
+	if count > 0 {
+		return apperror.New(apperror.ErrCodeConflict, "cannot delete category with existing products")
+	}
+
+	res, err := tx.ExecContext(ctx, `DELETE FROM product_categories WHERE id = $1`, categoryID)
+	if err != nil {
+		return apperror.HandleDBError(err, "failed to delete category")
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return apperror.New(apperror.ErrCodeNotFound, "category not found")
+	}
+
+	if err := tx.Commit(); err != nil {
+		return apperror.HandleDBError(err, "failed to commit delete category")
+	}
+	return nil
 }
 
 // --- BRAND MANAGEMENT ---
@@ -185,7 +250,7 @@ func (r *repository) CreateCondition(ctx context.Context, data model.ProductCond
 
 	err := r.db.QueryRowxContext(ctx, query, data.Name).StructScan(&createdCondition)
 	if err != nil {
-		if strings.Contains(err.Error(), "product_condition_name_lower_idx"){
+		if strings.Contains(err.Error(), "product_condition_name_lower_idx") {
 			return model.ProductCondition{}, apperror.New(apperror.ErrCodeConflict, "Condition already exists, try another condition name")
 		}
 		return model.ProductCondition{}, apperror.HandleDBError(err, "failed to create product condition")
