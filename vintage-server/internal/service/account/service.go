@@ -170,12 +170,12 @@ func (s *service) UpdateAvatar(ctx context.Context, accountId uuid.UUID, file mu
 
 	if err := s.repo.UpdateAccount(ctx, acc); err != nil {
 		log.Printf("Error updating account with new avatar URL: %v", err)
-		_ = s.uploader.Delete(ctx, newURL) // Rollback: attempt to delete the newly uploaded file
+		_ = s.uploader.DeleteByURL(ctx, newURL) // Rollback: attempt to delete the newly uploaded file
 		return UserProfileResponse{}, apperror.New(apperror.ErrCodeInternal, "could not save avatar information")
 	}
 
 	if oldURL != nil {
-		_ = s.uploader.Delete(ctx, *oldURL) // Best effort deletion of the old avatar
+		_ = s.uploader.DeleteByURL(ctx, *oldURL) // Best effort deletion of the old avatar
 	}
 
 	return ConvertAccountToUserProfileResponse(&acc), nil

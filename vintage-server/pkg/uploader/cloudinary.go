@@ -3,6 +3,7 @@ package uploader
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -10,13 +11,15 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"github.com/google/uuid"
 )
 
 // Uploader mendefinisikan kontrak untuk layanan upload file.
 // Dengan interface, kita bisa dengan mudah menggantinya ke GCS atau S3 nanti.
 type Uploader interface {
 	Upload(ctx context.Context, file io.Reader, filename string) (url string, err error)
-	Delete(ctx context.Context, publicID string) error
+	DeleteByURL(ctx context.Context, url string) error
+	UploadBrandLogo(ctx context.Context, file io.Reader) (string, error)
 }
 
 type cloudinaryUploader struct {
@@ -79,11 +82,31 @@ func (u *cloudinaryUploader) Upload(ctx context.Context, file io.Reader, filenam
 	return uploadResult.SecureURL, nil
 }
 
-// Implementasi di cloudinaryUploader
-func (u *cloudinaryUploader) Delete(ctx context.Context, avatar_url string) error {
+func (u *cloudinaryUploader) UploadBrandLogo(ctx context.Context, file io.Reader) (string, error) {
+	uploadParams := uploader.UploadParams{
+		PublicID:  uuid.NewString(),
+		Tags:      api.CldAPIArray{"vintage", "brand"},
+		Folder:    "vintage/brands",
+		Overwrite: func(b bool) *bool { return &b }(true), // inline pointer to bool
+	}
+
+	uploadResult, err := u.cld.Upload.Upload(ctx, file, uploadParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload brand logo: %w", err)
+	}
+
+	if uploadResult.SecureURL == "" {
+		return "", fmt.Errorf("upload succeeded but got empty URL")
+	}
+
+	// Kembalikan URL yang aman (HTTPS)
+	return uploadResult.SecureURL, nil
+}
+
+func (u *cloudinaryUploader) DeleteByURL(ctx context.Context, url string) error {
 	// Panggil API destroy Cloudinary
 	_, err := u.cld.Upload.Destroy(ctx, uploader.DestroyParams{
-		PublicID: extractPublicID(avatar_url),
+		PublicID: extractPublicID(url),
 		// ResourceType biasanya "image", bisa juga "video" dll
 		Invalidate: api.Bool(true), // biar cache CDN dihapus juga
 	})

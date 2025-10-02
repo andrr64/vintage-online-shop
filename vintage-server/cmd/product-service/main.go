@@ -53,11 +53,16 @@ func main() {
 		product := api.Group("/product")
 		{
 			product.GET(("/category"), productHandler.ReadCategories)
+			product.GET(("/brand"), productHandler.ReadBrand)
 			protected := product.Group("/protected", middleware.AuthMiddleware(authService))
 			{
 				protected.POST(("/category"), productHandler.CreateCategory)
 				protected.PUT(("/category"), productHandler.UpdateCategory)
 				protected.DELETE(("/category"), productHandler.DeleteCategory)
+
+				protected.POST(("/brand"), productHandler.CreateBrand)
+				protected.PUT(("/brand"), productHandler.UpdateBrand)
+				protected.DELETE(("/brand"), productHandler.DeleteBrand)
 			}
 
 		}

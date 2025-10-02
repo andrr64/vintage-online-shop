@@ -106,7 +106,7 @@ func (h *Handler) UpdateAvatar(c *gin.Context) {
 	}
 
 	// Perbaiki logika: SizeIsOk harusnya SizeIsNotOk atau if !SizeIsOk
-	if !utils.SizeIsOk(fileHeader, utils.BytesToMegaBytes(2)) {
+	if !utils.SizeIsOk(fileHeader, utils.Megabytes(2)) {
 		response.Error(c, http.StatusBadRequest, "file size must be less than 2MB")
 		return
 	}
