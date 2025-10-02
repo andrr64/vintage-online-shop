@@ -44,7 +44,6 @@ func CheckAuthAndRole(c *gin.Context, allowedRoles ...string) (uuid.UUID, error)
 	return accountID, nil
 }
 
-
 // handleError adalah helper internal untuk menangani error dari service secara konsisten
 func HandleError(c *gin.Context, err error) {
 	var appErr *apperror.AppError
@@ -54,4 +53,8 @@ func HandleError(c *gin.Context, err error) {
 		// Sembunyikan detail error internal dari client
 		response.Error(c, http.StatusInternalServerError, "an unexpected internal error occurred")
 	}
+}
+
+func HandleErrorBadRequest(c *gin.Context) {
+	response.Success(c, http.StatusBadRequest, "Invalid request.")
 }

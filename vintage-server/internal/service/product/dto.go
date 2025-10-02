@@ -24,3 +24,7 @@ type UpdateBrandRequest struct {
 	File       multipart.File
 	FileHeader *multipart.FileHeader
 }
+
+type ProductConditionRequest struct {
+    Name string `json:"name" binding:"required"`
+}

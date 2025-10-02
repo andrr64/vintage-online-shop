@@ -188,3 +188,63 @@ func (s *service) DeleteBrand(ctx context.Context, id int) error {
 	// Jika aman, lanjutkan hapus
 	return s.repo.DeleteBrand(ctx, id)
 }
+
+// -- PRODUCT CONDITION MANAGEMENT --
+func (s *service) CreateCondition(ctx context.Context, req ProductConditionRequest) (model.ProductCondition, error) {
+	condition := model.ProductCondition{
+		Name: req.Name,
+	}
+	return s.repo.CreateCondition(ctx, condition)
+}
+
+func (s *service) FindAllConditions(ctx context.Context) ([]model.ProductCondition, error) {
+	return s.repo.FindAllConditions(ctx)
+}
+
+func (s *service) FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error) {
+	condition, err := s.repo.FindConditionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ProductCondition{}, apperror.New(apperror.ErrCodeNotFound, "Product condition not found")
+		}
+		return model.ProductCondition{}, err
+	}
+	return condition, nil
+}
+
+func (s *service) UpdateCondition(ctx context.Context, id int16, req ProductConditionRequest) (model.ProductCondition, error) {
+	// 1. Cek dulu apakah kondisinya ada
+	_, err := s.FindConditionByID(ctx, id)
+	if err != nil {
+		return model.ProductCondition{}, err // Error "not found" sudah ditangani oleh FindConditionByID
+	}
+
+	// 2. Jika ada, lanjutkan update
+	conditionToUpdate := model.ProductCondition{
+		ID:   id,
+		Name: req.Name,
+	}
+
+	return s.repo.UpdateCondition(ctx, conditionToUpdate)
+}
+
+func (s *service) DeleteCondition(ctx context.Context, id int16) error {
+	// LOGIKA BISNIS: Jangan hapus kondisi jika masih dipakai oleh produk lain.
+	// 1. Cek dulu apakah kondisinya ada
+	_, err := s.FindConditionByID(ctx, id)
+	if err != nil {
+		return err // Error "not found" sudah ditangani oleh FindConditionByID
+	}
+
+	// 2. Cek apakah ada produk yang menggunakan kondisi ini
+	count, err := s.repo.CountProductsByCondition(ctx, id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return apperror.New(apperror.ErrCodeConflict, "Cannot delete condition: it is still used by one or more products")
+	}
+
+	// 3. Jika aman, hapus kondisi
+	return s.repo.DeleteCondition(ctx, id)
+}

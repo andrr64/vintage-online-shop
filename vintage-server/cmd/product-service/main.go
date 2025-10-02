@@ -54,6 +54,7 @@ func main() {
 		{
 			product.GET(("/category"), productHandler.ReadCategories)
 			product.GET(("/brand"), productHandler.ReadBrand)
+			product.GET(("/condition"), productHandler.ReadConditions)
 			protected := product.Group("/protected", middleware.AuthMiddleware(authService))
 			{
 				protected.POST(("/category"), productHandler.CreateCategory)
@@ -63,6 +64,10 @@ func main() {
 				protected.POST(("/brand"), productHandler.CreateBrand)
 				protected.PUT(("/brand"), productHandler.UpdateBrand)
 				protected.DELETE(("/brand"), productHandler.DeleteBrand)
+
+				protected.POST(("/condition"), productHandler.CreateCondition)
+				protected.PUT(("/condition/:id"), productHandler.UpdateCondition)
+				protected.DELETE(("/condition/:id"), productHandler.DeleteCondition)
 			}
 
 		}

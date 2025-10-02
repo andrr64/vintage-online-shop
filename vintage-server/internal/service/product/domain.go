@@ -8,7 +8,7 @@ import (
 )
 
 type Service interface {
-	// -- BRAND MANAGEMENT --
+	// -- CATEGORY MANAGEMENT --
 	CreateCategory(ctx context.Context, req ProductCategory) error
 	UpdateCategory(ctx context.Context, req ProductCategory) error
 	FindAllCategories(ctx context.Context) ([]ProductCategory, error)
@@ -21,6 +21,13 @@ type Service interface {
 	FindBrandByID(ctx context.Context, id int) (model.Brand, error)
 	UpdateBrand(ctx context.Context, id int, req UpdateBrandRequest) error
 	DeleteBrand(ctx context.Context, id int) error
+
+	// -- PRODUCT CONDITION MANAGEMENT --
+	CreateCondition(ctx context.Context, req ProductConditionRequest) (model.ProductCondition, error)
+	FindAllConditions(ctx context.Context) ([]model.ProductCondition, error)
+	FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error)
+	UpdateCondition(ctx context.Context, id int16, req ProductConditionRequest) (model.ProductCondition, error)
+	DeleteCondition(ctx context.Context, id int16) error
 }
 
 type Repository interface {
@@ -39,6 +46,14 @@ type Repository interface {
 	UpdateBrand(ctx context.Context, data model.Brand) error
 	DeleteBrand(ctx context.Context, id int) error
 	CountProductsByBrand(ctx context.Context, brandID int) (int, error)
+
+	// -- PRODUCT CONDITION MANAGEMENT --
+	CreateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error)
+	FindAllConditions(ctx context.Context) ([]model.ProductCondition, error)
+	FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error)
+	UpdateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error)
+	DeleteCondition(ctx context.Context, id int16) error
+	CountProductsByCondition(ctx context.Context, conditionID int16) (int, error)
 }
 
 type ProductHandler interface {
@@ -53,4 +68,10 @@ type ProductHandler interface {
 	ReadBrand(c *gin.Context)
 	UpdateBrand(c *gin.Context)
 	DeleteBrand(c *gin.Context)
+
+	// -- PRODUCT CONDITION MANAGEMENT --
+	CreateCondition(c *gin.Context)
+	ReadConditions(c *gin.Context)
+	UpdateCondition(c *gin.Context)
+	DeleteCondition(c *gin.Context)
 }
