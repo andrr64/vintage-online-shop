@@ -127,8 +127,14 @@ func (s *service) CreateBrand(ctx context.Context, req CreateBrandRequest) (mode
 		LogoURL: &logoURL, // Kirim URL sebagai pointer string
 	}
 
-	// 3. Panggil repository untuk menyimpan
-	return s.repo.CreateBrand(ctx, brand)
+	x, err := s.repo.CreateBrand(ctx, brand)
+	if err != nil {
+		if delErr := s.uploader.DeleteByURL(ctx, logoURL); delErr != nil {
+			log.Printf("failed to delete uploaded logo: %v", delErr)
+		}
+		return model.Brand{}, err
+	}
+	return x, nil
 }
 
 func (s *service) FindAllBrands(ctx context.Context) ([]model.Brand, error) {

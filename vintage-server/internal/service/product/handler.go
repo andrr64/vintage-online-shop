@@ -136,14 +136,11 @@ func (h *Handler) CreateBrand(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "logo file is required")
 		return
 	}
-	println(fileHeader)
 	// 3. Validasi file (ukuran, tipe, dll)
 	if !utils.SizeIsOk(fileHeader, utils.Megabytes(2)) {
 		response.Error(c, http.StatusBadRequest, "file size must be less than 2MB")
 		return
 	}
-	// Tambahkan validasi tipe file jika perlu
-	// if !utils.IsImage(fileHeader) { ... }
 
 	file, err := fileHeader.Open()
 	if err != nil {
