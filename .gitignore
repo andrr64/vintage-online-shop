@@ -5,3 +5,4 @@
 vintage-server/scripts
 *.vscode
 superuser
+.product-dev.air.toml
