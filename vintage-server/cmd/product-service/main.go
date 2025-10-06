@@ -20,60 +20,76 @@ func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("could not load config: %v", err)
-		return
 	}
 
-	// 2. Koneksi Database menggunakan config
+	// 1. Koneksi Database (tidak berubah)
 	db, err := database.NewPostgres(cfg.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
-		return
 	}
 
+	// 2. Inisialisasi semua service eksternal (tidak berubah)
 	cloudinaryService, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to Cloudinary service: %v", err)
-		return
 	}
-	// 1. Buat instance JWT service terlebih dahulu
 	authService := auth.NewJWTService(cfg.JWTSecretKey)
 
-	// 2. Buat instance repository
-	productRepo := product.NewRepository(db)
+	// highlight-start
+	// 3. RAKITAN ARSITEKTUR BARU
 
-	// 3. Suntikkan (inject) repository dan authService ke dalam product service
-	productService := product.NewService(productRepo, *authService, cloudinaryService)
+	// 3a. Buat instance Store, yang di dalamnya sudah ada Repository.
+	// Kita tidak lagi membuat Repository secara langsung di main.
+	productStore := product.NewStore(db)
 
-	// 4. Suntikkan product service ke dalam handler
+	// 3b. Suntikkan (inject) Store dan service lain ke dalam Product Service.
+	// NewService sekarang menerima Store, bukan Repository.
+	productService := product.NewService(productStore, *authService, cloudinaryService)
+
+	// 3c. Suntikkan Product Service ke dalam Handler (tidak berubah).
 	productHandler := product.NewHandler(productService)
+	// highlight-end
+
+	// 4. Setup Router (tidak berubah)
 	router := gin.Default()
 
 	api := router.Group("/api/v1")
 	{
-		product := api.Group("/product")
+		productGroup := api.Group("/product")
 		{
-			product.GET("/category", productHandler.ReadCategories)
-			product.GET("/brand", productHandler.ReadBrand)
-			product.GET("/condition", productHandler.ReadConditions)
-			protected := product.Group("/protected", middleware.AuthMiddleware(authService))
+			// Rute Publik
+			productGroup.GET("/category", productHandler.ReadCategories)
+			productGroup.GET("/brand", productHandler.ReadBrand)
+			productGroup.GET("/condition", productHandler.ReadConditions)
+
+			// Rute Terproteksi
+			protected := productGroup.Group("/protected", middleware.AuthMiddleware(authService))
 			{
+				// Category
 				protected.POST("/category", productHandler.CreateCategory)
-				protected.PUT("/category", productHandler.UpdateCategory)
-				protected.DELETE("/category", productHandler.DeleteCategory)
+				protected.PUT("/category/:id", productHandler.UpdateCategory) // Gunakan path param untuk konsistensi
+				protected.DELETE("/category/:id", productHandler.DeleteCategory)
 
+				// Brand
 				protected.POST("/brand", productHandler.CreateBrand)
-				protected.PUT("/brand", productHandler.UpdateBrand)
-				protected.DELETE("/brand", productHandler.DeleteBrand)
+				protected.PUT("/brand/:id", productHandler.UpdateBrand)
+				protected.DELETE("/brand/:id", productHandler.DeleteBrand)
 
+				// Condition
 				protected.POST("/condition", productHandler.CreateCondition)
 				protected.PUT("/condition/:id", productHandler.UpdateCondition)
 				protected.DELETE("/condition/:id", productHandler.DeleteCondition)
 
-				protected.POST("/product", productHandler.CreateProduct)
+				// Product
+				protected.POST("", productHandler.CreateProduct)
+				// Tambahkan rute product lainnya di sini (GET, PUT, DELETE)
 			}
-
 		}
 	}
+
+	// 5. Jalankan Server (tidak berubah)
 	log.Printf("Product Service running on port :%s", cfg.ProductServicePort)
-	router.Run(fmt.Sprintf(":%s", cfg.ProductServicePort))
+	if err := router.Run(fmt.Sprintf(":%s", cfg.ProductServicePort)); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
 }
