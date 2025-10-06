@@ -7,6 +7,7 @@ import (
 	"io"
 	"path"
 	"strings"
+	"vintage-server/pkg/utils"
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api"
@@ -20,6 +21,7 @@ type Uploader interface {
 	Upload(ctx context.Context, file io.Reader, filename string) (url string, err error)
 	DeleteByURL(ctx context.Context, url string) error
 	UploadBrandLogo(ctx context.Context, file io.Reader) (string, error)
+	UploadProductImage(ctx context.Context, file io.Reader) (string, error)
 }
 
 type cloudinaryUploader struct {
@@ -87,12 +89,33 @@ func (u *cloudinaryUploader) UploadBrandLogo(ctx context.Context, file io.Reader
 		PublicID:  uuid.NewString(),
 		Tags:      api.CldAPIArray{"vintage", "brand"},
 		Folder:    "vintage/brands",
-		Overwrite: func(b bool) *bool { return &b }(true), // inline pointer to bool
+		Overwrite: utils.Ptr(true), // inline pointer to bool
 	}
 
 	uploadResult, err := u.cld.Upload.Upload(ctx, file, uploadParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload brand logo: %w", err)
+	}
+
+	if uploadResult.SecureURL == "" {
+		return "", fmt.Errorf("upload succeeded but got empty URL")
+	}
+
+	// Kembalikan URL yang aman (HTTPS)
+	return uploadResult.SecureURL, nil
+}
+
+func (u *cloudinaryUploader) UploadProductImage(ctx context.Context, file io.Reader) (string, error) {
+	uploadParams := uploader.UploadParams{
+		PublicID:  uuid.NewString(),
+		Tags:      api.CldAPIArray{"vintage", "product"},
+		Folder:    "vintage/products",
+		Overwrite: utils.Ptr(true), // inline pointer to bool
+	}
+
+	uploadResult, err := u.cld.Upload.Upload(ctx, file, uploadParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload product logo: %w", err)
 	}
 
 	if uploadResult.SecureURL == "" {
