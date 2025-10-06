@@ -1,7 +1,9 @@
 package response
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"vintage-server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +24,14 @@ func Success[T any](c *gin.Context, statusCode int, data T) {
 	c.JSON(statusCode, APIResponse[T]{Data: data})
 }
 
+func SuccessWD_Created(c *gin.Context) {
+	SuccessWithoutData(c, http.StatusCreated, "Created")
+}
+
+func SuccessWD_OK(c *gin.Context) {
+	SuccessWithoutData(c, http.StatusOK, "Success")
+}
+
 // SuccessWithoutData mengirimkan response sukses tanpa data.
 func SuccessWithoutData(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, APIResponse[any]{Detail: &message})
@@ -37,7 +47,7 @@ func Error(c *gin.Context, statusCode int, message string) {
 // =================================================================================
 
 func ErrorBadRequest(c *gin.Context, message ...string) {
-	msg := "Invalid request"
+	msg := "Bad request"
 	if len(message) > 0 {
 		msg = message[0]
 	}
@@ -50,6 +60,11 @@ func ErrorUnauthorized(c *gin.Context, message ...string) {
 		msg = message[0]
 	}
 	c.JSON(http.StatusUnauthorized, APIResponse[any]{Detail: utils.Ptr(msg)})
+}
+
+func ErrorForbiddenRoles(c *gin.Context, roles ...string) {
+	msg := fmt.Sprintf("Only %s can access this feature", strings.Join(roles, ", "))
+	Error(c, http.StatusForbidden, msg)
 }
 
 func ErrorForbidden(c *gin.Context, message ...string) {

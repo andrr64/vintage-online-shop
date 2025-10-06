@@ -123,6 +123,12 @@ func (h *Handler) DeleteCategory(c *gin.Context) {
 
 // -- BRAND MANAGEMENT --
 func (h *Handler) CreateBrand(c *gin.Context) {
+	_, err := helper.CheckAuthAndRole(c, "admin")
+	if err != nil {
+		response.ErrorUnauthorized(c)
+		return
+	}
+
 	// 1. Baca data teks dari form-data
 	name := c.PostForm("name")
 	if name == "" {
@@ -287,6 +293,12 @@ func (h *Handler) DeleteBrand(c *gin.Context) {
 
 // -- PRODUCT CONDITION MANAGEMENET --
 func (h *Handler) CreateCondition(c *gin.Context) {
+	_, err := helper.CheckAuthAndRole(c, "admin")
+	if err != nil {
+		response.ErrorUnauthorized(c)
+		return
+	}
+
 	var req ProductConditionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helper.HandleErrorBadRequest(c)
@@ -370,4 +382,35 @@ func (h *Handler) DeleteCondition(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, gin.H{"message": "Product condition deleted successfully"})
+}
+
+// -- PRODUCT MANAGEMENT --
+func (h *Handler) CreateProduct(c *gin.Context) {
+	// Daftar role yang diizinkan
+	roles := []string{"seller"}
+
+	// Cek autentikasi dan role user
+	_, err := helper.CheckAuthAndRole(c, roles...)
+	if err != nil {
+		response.ErrorForbiddenRoles(c, roles...)
+		return
+	}
+
+	// validasi token
+	accountID, _, err := helper.ExtractAccountInfoFromToken(c)
+
+	if err != nil {
+		response.ErrorInternalServer(c)
+		return
+	}
+
+	var request CreateProductRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		response.ErrorBadRequest(c)
+		return
+	}
+
+	h.svc.CreateProduct(c.Request.Context(), accountID, request)
+
+	response.SuccessWD_Created(c)
 }

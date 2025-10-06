@@ -52,22 +52,24 @@ func main() {
 	{
 		product := api.Group("/product")
 		{
-			product.GET(("/category"), productHandler.ReadCategories)
-			product.GET(("/brand"), productHandler.ReadBrand)
-			product.GET(("/condition"), productHandler.ReadConditions)
+			product.GET("/category", productHandler.ReadCategories)
+			product.GET("/brand", productHandler.ReadBrand)
+			product.GET("/condition", productHandler.ReadConditions)
 			protected := product.Group("/protected", middleware.AuthMiddleware(authService))
 			{
-				protected.POST(("/category"), productHandler.CreateCategory)
-				protected.PUT(("/category"), productHandler.UpdateCategory)
-				protected.DELETE(("/category"), productHandler.DeleteCategory)
+				protected.POST("/category", productHandler.CreateCategory)
+				protected.PUT("/category", productHandler.UpdateCategory)
+				protected.DELETE("/category", productHandler.DeleteCategory)
 
-				protected.POST(("/brand"), productHandler.CreateBrand)
-				protected.PUT(("/brand"), productHandler.UpdateBrand)
-				protected.DELETE(("/brand"), productHandler.DeleteBrand)
+				protected.POST("/brand", productHandler.CreateBrand)
+				protected.PUT("/brand", productHandler.UpdateBrand)
+				protected.DELETE("/brand", productHandler.DeleteBrand)
 
-				protected.POST(("/condition"), productHandler.CreateCondition)
-				protected.PUT(("/condition/:id"), productHandler.UpdateCondition)
-				protected.DELETE(("/condition/:id"), productHandler.DeleteCondition)
+				protected.POST("/condition", productHandler.CreateCondition)
+				protected.PUT("/condition/:id", productHandler.UpdateCondition)
+				protected.DELETE("/condition/:id", productHandler.DeleteCondition)
+
+				protected.POST("/product", productHandler.CreateProduct)
 			}
 
 		}

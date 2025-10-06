@@ -71,7 +71,7 @@ func (s *service) RegisterCustomer(ctx context.Context, req RegisterRequest) (Us
 		UpdatedAt: time.Now(),
 	}
 
-	createdAcc, err := s.repo.SaveAccount(ctx, newAccount, "admin")
+	createdAcc, err := s.repo.SaveAccount(ctx, newAccount, "customer")
 	if err != nil {
 		log.Printf("Error saving account: %v", err)
 		return UserProfileResponse{}, apperror.New(apperror.ErrCodeInternal, "failed to create account")
@@ -291,17 +291,17 @@ func (s *service) LoginSeller(ctx context.Context, req LoginRequest) (LoginRespo
 		if errors.Is(err, sql.ErrNoRows) {
 			return LoginResponse{}, apperror.New(
 				apperror.ErrCodeUnauthorized,
-				"Invalid Data",
+				"Account not Found",
 			)
 		}
 		log.Printf("Error finding account: %v", err) // Contoh logging
-		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Invalid Data")
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Account not Found")
 	}
 	err = hash.Verify(acc.Password, req.Password)
 	if err != nil {
 		return LoginResponse{}, apperror.New(
 			apperror.ErrCodeUnauthorized,
-			"Invalid Data",
+			"Account not Found",
 		)
 	}
 	access_token, err := s.jwt.GenerateToken(acc.ID, role)
@@ -333,18 +333,18 @@ func (s *service) LoginAdmin(ctx context.Context, req LoginRequest) (LoginRespon
 		if errors.Is(err, sql.ErrNoRows) {
 			return LoginResponse{}, apperror.New(
 				apperror.ErrCodeUnauthorized,
-				"Invalid Data",
+				"Account not Found",
 			)
 		}
 		log.Printf("Error finding account: %v", err) // Contoh logging
-		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Invalid Data")
+		return LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "Account not Found")
 	}
 
 	err = hash.Verify(acc.Password, req.Password)
 	if err != nil {
 		return LoginResponse{}, apperror.New(
 			apperror.ErrCodeUnauthorized,
-			"Invalid Data",
+			"Account not Found",
 		)
 	}
 	access_token, err := s.jwt.GenerateToken(acc.ID, role)

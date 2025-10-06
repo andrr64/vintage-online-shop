@@ -9,6 +9,8 @@ import (
 	"vintage-server/pkg/apperror"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/uploader"
+
+	"github.com/google/uuid"
 )
 
 // service is a struct that will implement the Service interface from domain.go
@@ -247,4 +249,16 @@ func (s *service) DeleteCondition(ctx context.Context, id int16) error {
 
 	// 3. Jika aman, hapus kondisi
 	return s.repo.DeleteCondition(ctx, id)
+}
+
+// -- PRODUCT MANAGEMENT --
+func (s *service) CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest) {
+	// 1. Ambil info toko berdasarkan Akun ID yang login
+	_, err := s.repo.FindShopByAccountID(ctx, accountID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return
+		}
+		return
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"vintage-server/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Service interface {
@@ -28,6 +29,9 @@ type Service interface {
 	FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error)
 	UpdateCondition(ctx context.Context, id int16, req ProductConditionRequest) (model.ProductCondition, error)
 	DeleteCondition(ctx context.Context, id int16) error
+
+	// -- PRODUCT MANAGEMENT
+	CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest) 
 }
 
 type Repository interface {
@@ -54,6 +58,9 @@ type Repository interface {
 	UpdateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error)
 	DeleteCondition(ctx context.Context, id int16) error
 	CountProductsByCondition(ctx context.Context, conditionID int16) (int, error)
+
+	// -- SHOP MANAGEMENT --
+	FindShopByAccountID(ctx context.Context, accountID uuid.UUID) (model.Shop, error)
 }
 
 type ProductHandler interface {
@@ -74,4 +81,7 @@ type ProductHandler interface {
 	ReadConditions(c *gin.Context)
 	UpdateCondition(c *gin.Context)
 	DeleteCondition(c *gin.Context)
+
+	// -- PRODUCT MANAGEMENT --
+	CreateProduct(c *gin.Context)
 }

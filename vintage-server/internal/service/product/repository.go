@@ -9,6 +9,7 @@ import (
 	"vintage-server/internal/model"
 	"vintage-server/pkg/apperror"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq" // <-- Import penting
 )
@@ -277,7 +278,6 @@ func (r *repository) FindConditionByID(ctx context.Context, id int16) (model.Pro
 
 	err := r.db.GetContext(ctx, &condition, query, id)
 	if err != nil {
-		// Cek spesifik untuk ErrNoRows agar service bisa menanganinya
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ProductCondition{}, err
 		}
@@ -331,4 +331,18 @@ func (r *repository) CountProductsByCondition(ctx context.Context, conditionID i
 	}
 
 	return count, nil
+}
+
+// -- SHOP MANAGEMENT --
+func (r *repository) FindShopByAccountID(ctx context.Context, accountID uuid.UUID) (model.Shop, error) {
+	var shop model.Shop
+	query := "SELECT * FROM SHOP WHERE account_id = $1"
+
+	if err := r.db.GetContext(ctx, &shop, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.Shop{}, err
+		}
+		return model.Shop{}, apperror.HandleDBError(err, "failed to find product condition by id")
+	}
+	return shop, nil
 }
