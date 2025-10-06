@@ -15,14 +15,14 @@ import (
 
 // service is a struct that will implement the Service interface from domain.go
 type service struct {
-	repo     Repository
+	store    Store           // <-- SEKARANG HANYA BERGANTUNG PADA STORE
 	jwt      auth.JWTService // <-- Gunakan interface
 	uploader uploader.Uploader
 }
 
-func NewService(repo Repository, jwt auth.JWTService, uploader uploader.Uploader) Service {
+func NewService(store Store, jwt auth.JWTService, uploader uploader.Uploader) Service {
 	return &service{
-		repo:     repo,
+		store:    store,
 		jwt:      jwt, // <-- Terima dari parameter
 		uploader: uploader,
 	}
@@ -33,23 +33,23 @@ func (s *service) CreateCategory(ctx context.Context, req ProductCategory) error
 	data := model.ProductCategory{
 		Name: req.Name,
 	}
-	err := s.repo.CreateCategory(ctx, data)
+	// Ganti s.repo menjadi s.store
+	err := s.store.CreateCategory(ctx, data)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// FindAllCategories adalah operasi baca, tidak memerlukan transaksi.
 func (s *service) FindAllCategories(ctx context.Context) ([]ProductCategory, error) {
-	categoriesFromRepo, err := s.repo.FindAllCategories(ctx)
+	// Ganti s.repo menjadi s.store
+	categoriesFromRepo, err := s.store.FindAllCategories(ctx)
 	if err != nil {
-		// Cukup tangani error non-ErrNoRows.
-		// sqlx.Select sudah mengembalikan slice kosong jika tidak ada hasil, bukan error.
 		log.Printf("Error finding all categories from repo: %v", err)
 		return nil, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
 	}
 
-	// Proses Mapping (sudah benar)
 	var result []ProductCategory
 	for _, category := range categoriesFromRepo {
 		result = append(result, ProductCategory{
@@ -57,13 +57,18 @@ func (s *service) FindAllCategories(ctx context.Context) ([]ProductCategory, err
 			Name: category.Name,
 		})
 	}
-
 	return result, nil
 }
 
+// FindById adalah operasi baca, tidak memerlukan transaksi.
 func (s *service) FindById(ctx context.Context, id int) (ProductCategory, error) {
-	res, err := s.repo.FindById(ctx, id)
+	// Ganti s.repo menjadi s.store
+	res, err := s.store.FindById(ctx, id)
 	if err != nil {
+		// Di sini kita bisa menambahkan mapping error not found yang lebih baik
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProductCategory{}, apperror.New(apperror.ErrCodeNotFound, "category not found")
+		}
 		return ProductCategory{}, err
 	}
 	return ProductCategory{
@@ -73,192 +78,393 @@ func (s *service) FindById(ctx context.Context, id int) (ProductCategory, error)
 }
 
 func (s *service) UpdateCategory(ctx context.Context, req ProductCategory) error {
-	id := *req.ID
-	old, err := s.repo.FindById(ctx, id)
-	if err != nil {
-		return err
-	}
-	old.Name = req.Name
-	err = s.repo.UpdateCategory(ctx, old)
-	if err != nil {
-		return err
-	}
-	return nil
+	err := s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		id := *req.ID
+		// 1. Baca data LAMA di dalam transaksi
+		old, errTx := repoInTx.FindById(ctx, id)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "category not found")
+			}
+			return errTx
+		}
+		// 2. Modifikasi data
+		old.Name = req.Name
+
+		// 3. Tulis data BARU di dalam transaksi yang sama
+		errTx = repoInTx.UpdateCategory(ctx, old)
+		if errTx != nil {
+			return errTx
+		}
+
+		return nil // Sukses, transaksi akan di-commit
+	})
+	return err
 }
 
 func (s *service) DeleteCategory(ctx context.Context, categoryID int) error {
-	// 1. Cek apakah kategori ini masih digunakan oleh produk lain.
-	count, err := s.repo.CountProductsByCategory(ctx, categoryID)
-	if err != nil {
-		// Jika errornya bukan 'not found', maka ini error internal
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Error counting products by category: %v", err)
+	err := s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		_, errTx := repoInTx.FindById(ctx, categoryID)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "category not found")
+			}
+			return errTx
+		}
+		// 2. Cek apakah kategori masih digunakan oleh produk (di dalam transaksi)
+		count, errTx := repoInTx.CountProductsByCategory(ctx, categoryID)
+		if errTx != nil {
 			return apperror.New(apperror.ErrCodeInternal, "failed to check category usage")
 		}
-		// Jika errornya 'not found' dari repo lain (misal FindById), lanjutkan saja
-		// karena Delete di repo akan menangani kasus 'not found' juga.
-	}
 
-	// 2. Jika count > 0, artinya kategori masih dipakai. Kembalikan error konflik.
-	if count > 0 {
-		return apperror.New(apperror.ErrCodeConflict, "cannot delete category that is still in use by products")
-	}
+		if count > 0 {
+			// Jika masih dipakai, kembalikan error. Transaksi akan di-rollback.
+			return apperror.New(apperror.ErrCodeConflict, "cannot delete category that is still in use by products")
+		}
 
-	// 3. Jika aman (count == 0), panggil repository untuk menghapus kategori.
-	err = s.repo.DeleteCategory(ctx, categoryID)
-	if err != nil {
-		// Kembalikan error dari repository (bisa jadi NotFound atau Internal)
-		return err
-	}
+		// 3. Jika aman, hapus kategori (di dalam transaksi yang sama)
+		errTx = repoInTx.DeleteCategory(ctx, categoryID)
+		if errTx != nil {
+			return errTx
+		}
 
-	return nil
+		return nil // Sukses, transaksi akan di-commit
+	})
+	return err
 }
 
 // -- BRAND MANAGEMENt--
-
 func (s *service) CreateBrand(ctx context.Context, req CreateBrandRequest) (model.Brand, error) {
-	// 1. Upload file ke cloud storage
 	logoURL, err := s.uploader.UploadBrandLogo(ctx, req.File)
 	if err != nil {
 		return model.Brand{}, apperror.New(apperror.ErrCodeInternal, "failed to upload logo")
 	}
-
-	// 2. Siapkan data untuk disimpan ke database
+	// 2. Siapkan data untuk disimpan ke database.
 	brand := model.Brand{
 		Name:    req.Name,
-		LogoURL: &logoURL, // Kirim URL sebagai pointer string
+		LogoURL: &logoURL,
 	}
-
-	x, err := s.repo.CreateBrand(ctx, brand)
+	// 3. Simpan ke database.
+	// Menggunakan s.store, bukan s.repo.
+	createdBrand, err := s.store.CreateBrand(ctx, brand)
 	if err != nil {
+		// Jika penyimpanan DB GAGAL, kita harus membatalkan upload (rollback manual).
+		log.Printf("Database insertion failed for brand '%s'. Deleting uploaded logo: %s", req.Name, logoURL)
 		if delErr := s.uploader.DeleteByURL(ctx, logoURL); delErr != nil {
-			log.Printf("failed to delete uploaded logo: %v", delErr)
+			log.Printf("CRITICAL: failed to delete uploaded logo during rollback: %v", delErr)
 		}
-		return model.Brand{}, err
+		return model.Brand{}, err // Kembalikan error asli dari database.
 	}
-	return x, nil
+	return createdBrand, nil
 }
 
 func (s *service) FindAllBrands(ctx context.Context) ([]model.Brand, error) {
-	return s.repo.FindAllBrands(ctx)
+	return s.store.FindAllBrands(ctx)
 }
 
 func (s *service) FindBrandByID(ctx context.Context, id int) (model.Brand, error) {
-	return s.repo.FindBrandByID(ctx, id)
+	brand, err := s.store.FindBrandByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.Brand{}, apperror.New(apperror.ErrCodeNotFound, "brand not found")
+		}
+		return model.Brand{}, err
+	}
+	return brand, nil
 }
 
 func (s *service) UpdateBrand(ctx context.Context, id int, req UpdateBrandRequest) error {
-	// 1. Ambil data brand yang ada
-	existingBrand, err := s.repo.FindBrandByID(ctx, id)
+	var oldLogoURL *string
+	var newLogoURL string
+
+	// 1. Jika ada file baru, upload terlebih dahulu.
+	if req.File != nil {
+		var errUpload error
+		newLogoURL, errUpload = s.uploader.UploadBrandLogo(ctx, req.File)
+		if errUpload != nil {
+			return apperror.New(apperror.ErrCodeInternal, "failed to upload new logo")
+		}
+	}
+
+	// 2. Lakukan operasi database di dalam transaksi yang aman.
+	err := s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		// 2a. Ambil data brand yang ada di dalam transaksi.
+		existingBrand, errTx := repoInTx.FindBrandByID(ctx, id)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "brand not found")
+			}
+			return errTx
+		}
+
+		// Simpan URL logo lama untuk dihapus nanti HANYA JIKA transaksi berhasil.
+		oldLogoURL = existingBrand.LogoURL
+
+		// 2b. Update field-fieldnya.
+		existingBrand.Name = req.Name
+		if newLogoURL != "" { // Jika ada logo baru yang di-upload
+			existingBrand.LogoURL = &newLogoURL
+		}
+
+		// 2c. Simpan perubahan ke DB di dalam transaksi.
+		return repoInTx.UpdateBrand(ctx, existingBrand)
+	})
+
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return apperror.New(apperror.ErrCodeNotFound, "Brand not found, bro...")
+		// Jika transaksi GAGAL, kita harus membatalkan upload logo baru (jika ada).
+		if newLogoURL != "" {
+			log.Printf("Database transaction failed for updating brand %d. Deleting newly uploaded logo: %s", id, newLogoURL)
+			s.uploader.DeleteByURL(context.Background(), newLogoURL)
 		}
 		return err
 	}
 
-	// 2. Update nama
-	existingBrand.Name = req.Name
-
-	// 3. Jika ada file baru, upload dan ganti URL logo
-	print(req.File != nil)
-	if req.File != nil {
-		if existingBrand.LogoURL != nil {
-			s.uploader.DeleteByURL(ctx, *existingBrand.LogoURL) // Asumsi ada method Delete
-		}
-		newLogoURL, err := s.uploader.UploadBrandLogo(ctx, req.File)
-		if err != nil {
-			return apperror.New(apperror.ErrCodeInternal, "failed to upload new logo")
-		}
-		existingBrand.LogoURL = &newLogoURL
+	// 4. Jika transaksi SUKSES, hapus logo lama dari cloud (jika ada).
+	if oldLogoURL != nil && newLogoURL != "" {
+		log.Printf("Database transaction successful. Deleting old logo: %s", *oldLogoURL)
+		s.uploader.DeleteByURL(context.Background(), *oldLogoURL)
 	}
-
-	return s.repo.UpdateBrand(ctx, existingBrand)
+	return nil
 }
 
 func (s *service) DeleteBrand(ctx context.Context, id int) error {
-	// LOGIKA BISNIS PENTING: Cek apakah brand masih digunakan oleh produk
-	count, err := s.repo.CountProductsByBrand(ctx, id)
-	if err != nil {
-		log.Printf("Error counting products by brand: %v", err)
-		return apperror.New(apperror.ErrCodeInternal, "failed to check brand usage")
-	}
-	if count > 0 {
-		return apperror.New(apperror.ErrCodeConflict, "cannot delete brand that is still in use by products")
-	}
+	var brandToDelete model.Brand
 
-	// Jika aman, lanjutkan hapus
-	return s.repo.DeleteBrand(ctx, id)
+	// Gunakan s.store.ExecTx untuk membuat "safe scope".
+	err := s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		// 1. Ambil data brand untuk mendapatkan URL logo dan memastikan brand ada.
+		var errTx error
+		brandToDelete, errTx = repoInTx.FindBrandByID(ctx, id)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "brand not found")
+			}
+			return errTx
+		}
+
+		// 2. Cek apakah brand masih digunakan (di dalam transaksi).
+		count, errTx := repoInTx.CountProductsByBrand(ctx, id)
+		if errTx != nil {
+			return apperror.New(apperror.ErrCodeInternal, "failed to check brand usage")
+		}
+		if count > 0 {
+			return apperror.New(apperror.ErrCodeConflict, "cannot delete brand that is still in use by products")
+		}
+
+		// 3. Hapus brand dari database (di dalam transaksi).
+		return repoInTx.DeleteBrand(ctx, id)
+	})
+	// Jika transaksi GAGAL, hentikan proses.
+	if err != nil {
+		return err
+	}
+	// Jika transaksi SUKSES, hapus logo dari cloud.
+	if brandToDelete.LogoURL != nil {
+		log.Printf("Database deletion successful for brand %d. Deleting logo from cloud: %s", id, *brandToDelete.LogoURL)
+		s.uploader.DeleteByURL(context.Background(), *brandToDelete.LogoURL)
+	}
+	return nil
 }
 
 // -- PRODUCT CONDITION MANAGEMENT --
 func (s *service) CreateCondition(ctx context.Context, req ProductConditionRequest) (model.ProductCondition, error) {
-	condition := model.ProductCondition{
-		Name: req.Name,
+	result, err := s.store.CreateCondition(ctx, model.ProductCondition{Name: req.Name})
+	if err != nil {
+		return model.ProductCondition{}, err
 	}
-	return s.repo.CreateCondition(ctx, condition)
+	return result, err
 }
 
 func (s *service) FindAllConditions(ctx context.Context) ([]model.ProductCondition, error) {
-	return s.repo.FindAllConditions(ctx)
+	return s.store.FindAllConditions(ctx)
 }
 
 func (s *service) FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error) {
-	condition, err := s.repo.FindConditionByID(ctx, id)
+	condition, err := s.store.FindConditionByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ProductCondition{}, apperror.New(apperror.ErrCodeNotFound, "Product condition not found")
 		}
 		return model.ProductCondition{}, err
 	}
-	return condition, nil
+	return condition, err
 }
 
 func (s *service) UpdateCondition(ctx context.Context, id int16, req ProductConditionRequest) (model.ProductCondition, error) {
-	// 1. Cek dulu apakah kondisinya ada
-	_, err := s.FindConditionByID(ctx, id)
-	if err != nil {
-		return model.ProductCondition{}, err // Error "not found" sudah ditangani oleh FindConditionByID
-	}
+	var updatedCondition model.ProductCondition
 
-	// 2. Jika ada, lanjutkan update
-	conditionToUpdate := model.ProductCondition{
-		ID:   id,
-		Name: req.Name,
-	}
+	// Gunakan s.store.ExecTx untuk membuat "safe scope".
+	err := s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		// 1. Baca data LAMA di dalam transaksi.
+		conditionToUpdate, errTx := repoInTx.FindConditionByID(ctx, id)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "product condition not found")
+			}
+			return errTx
+		}
 
-	return s.repo.UpdateCondition(ctx, conditionToUpdate)
+		// 2. Modifikasi data.
+		conditionToUpdate.Name = req.Name
+
+		// 3. Tulis data BARU di dalam transaksi yang sama.
+		updatedCondition, errTx = repoInTx.UpdateCondition(ctx, conditionToUpdate)
+		if errTx != nil {
+			return errTx
+		}
+
+		return nil // Sukses, transaksi akan di-commit.
+	})
+
+	return updatedCondition, err // Kembalikan hasil dan error dari transaksi.
 }
 
 func (s *service) DeleteCondition(ctx context.Context, id int16) error {
-	// LOGIKA BISNIS: Jangan hapus kondisi jika masih dipakai oleh produk lain.
-	// 1. Cek dulu apakah kondisinya ada
-	_, err := s.FindConditionByID(ctx, id)
-	if err != nil {
-		return err // Error "not found" sudah ditangani oleh FindConditionByID
-	}
+	// 1. Mulai transaksi
+	err := s.store.ExecTx(ctx, func(r Repository) error {
+		
+		// 2. Cek apakah data exists atau tidak
+		_, errTx := r.FindConditionByID(ctx, id)
+		if errTx != nil {
+			if errors.Is(errTx, sql.ErrNoRows) {
+				return apperror.New(apperror.ErrCodeNotFound, "product condition not found")
+			}
+			return errTx
+		}
 
-	// 2. Cek apakah ada produk yang menggunakan kondisi ini
-	count, err := s.repo.CountProductsByCondition(ctx, id)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return apperror.New(apperror.ErrCodeConflict, "Cannot delete condition: it is still used by one or more products")
-	}
-
-	// 3. Jika aman, hapus kondisi
-	return s.repo.DeleteCondition(ctx, id)
+		// 3. JUMLAH PRODUK YANG TERIKAT DENGAN CONDITION HARUS 0
+		count, errTx := r.CountProductsByCondition(ctx, id)
+		if errTx != nil {
+			return apperror.New(apperror.ErrCodeInternal, "failed to check condition usage")
+		}
+		if count > 0 {
+			// Jika masih dipakai, kembalikan error. Transaksi akan otomatis di-rollback.
+			return apperror.New(apperror.ErrCodeConflict, "cannot delete condition that is still in use by products")
+		}
+		
+		return r.DeleteCondition(ctx, id)
+	})
+	return err
 }
 
-// -- PRODUCT MANAGEMENT --
-func (s *service) CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest) {
-	// 1. Ambil info toko berdasarkan Akun ID yang login
-	_, err := s.repo.FindShopByAccountID(ctx, accountID)
+// internal/service/product_service.go
+
+func (s *service) CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest)  {
+	// 1. VALIDASI BISNIS: Pastikan akun yang login memiliki toko yang terdaftar.
+	// Kita menggunakan s.store karena ini adalah operasi baca.
+	shop, err := s.store.FindShopByAccountID(ctx, accountID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return
+			return //TODO
 		}
-		return
+		// Error database lainnya
+		return //TODO
 	}
+
+	// 2. INTERAKSI LAYANAN EKSTERNAL: Upload semua gambar ke cloud storage.
+	var uploadedImageURLs []string
+
+	// Fungsi cleanup ini adalah "rollback manual" untuk cloud storage.
+	cleanupCloudImages := func() {
+		log.Println("Cleanup triggered: deleting product images from cloud storage...")
+		cleanupCtx := context.Background()
+		for _, url := range uploadedImageURLs {
+			if delErr := s.uploader.DeleteByURL(cleanupCtx, url); delErr != nil {
+				log.Printf("CRITICAL: Failed to delete image %s during cleanup: %v", url, delErr)
+			}
+		}
+	}
+
+	// Loop untuk upload file satu per satu.
+	for _, fileHeader := range request.Images {
+		file, err := fileHeader.Open()
+		if err != nil {
+			cleanupCloudImages()
+			return //TODO
+		}
+		
+		url, err := s.uploader.UploadProductImage(ctx, file)
+		file.Close() // Tutup file sesegera mungkin.
+
+		if err != nil {
+			cleanupCloudImages() // Jika upload gagal, bersihkan semua yang sudah berhasil.
+			return //TODO
+		}
+		uploadedImageURLs = append(uploadedImageURLs, url)
+	}
+
+	// 3. OPERASI DATABASE: Simpan produk dan gambar dalam satu transaksi atomik.
+	var createdProduct model.Product
+	err = s.store.ExecTx(ctx, func(repoInTx Repository) error {
+		// Semua kode di dalam blok ini dijamin aman dari race condition.
+
+		// 3a. Siapkan data produk utama.
+		productData := model.Product{
+			ShopID:      shop.ID,
+			Name:        request.Name,
+			CategoryID:  request.CategoryID,
+			ConditionID: request.ConditionID,
+			Price:       request.Price,
+			Stock:       request.Stock,
+			Description: &request.Description,
+			Summary:     &request.Summary,
+			BrandID:     request.BrandID,
+			SizeID:      request.SizeID,
+		}
+
+		// 3b. Simpan produk utama ke DB.
+		var errTx error
+		createdProduct, errTx = repoInTx.CreateProduct(ctx, productData)
+		if errTx != nil {
+			return errTx // Error di sini akan memicu Rollback oleh Store.
+		}
+
+		// 3c. Siapkan data gambar-gambar produk dengan ID produk yang baru dibuat.
+		var imageModels []model.ProductImage
+		for i, imgURL := range uploadedImageURLs {
+			imageModels = append(imageModels, model.ProductImage{
+				ProductID:  createdProduct.ID,
+				ImageIndex: int16(i + 1), // Index gambar mulai dari 1
+				URL:        imgURL,
+			})
+		}
+		
+		// 3d. Simpan semua data gambar ke DB (bulk insert).
+		if errTx = repoInTx.CreateProductImages(ctx, imageModels); errTx != nil {
+			return errTx // Error di sini juga akan memicu Rollback.
+		}
+
+		return nil // Sukses! Store akan otomatis Commit transaksi ini.
+	})
+
+	// 4. PENANGANAN HASIL TRANSAKSI
+	if err != nil {
+		// Jika ExecTx mengembalikan error, berarti transaksi database sudah di-rollback.
+		// Tugas kita sekarang adalah melakukan rollback manual untuk file di cloud.
+		cleanupCloudImages()
+		return //TODO
+	}
+
+	// // 5. SIAPKAN RESPONSE SUKSES
+	// imageResponses := []product.ProductImageResponse{}
+	// for i, url := range uploadedImageURLs {
+	// 	imageResponses = append(imageResponses, ProductImageResponse{
+	// 		URL:        url,
+	// 		ImageIndex: int16(i + 1),
+	// 	})
+	// }
+
+	// response := product.ProductResponse{
+	// 	ID:          createdProduct.ID,
+	// 	ShopID:      createdProduct.ShopID,
+	// 	Name:        createdProduct.Name,
+	// 	Price:       createdProduct.Price,
+	// 	Stock:       createdProduct.Stock,
+	// 	Summary:     createdProduct.Summary,
+	// 	Description: createdProduct.Description,
+	// 	Images:      imageResponses,
+	// }
+
+	// return response, nil
+	return
 }

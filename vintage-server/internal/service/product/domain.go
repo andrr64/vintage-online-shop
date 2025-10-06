@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 type Service interface {
@@ -31,10 +32,12 @@ type Service interface {
 	DeleteCondition(ctx context.Context, id int16) error
 
 	// -- PRODUCT MANAGEMENT
-	CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest) 
+	CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest)
 }
 
 type Repository interface {
+	WithTx(tx *sqlx.Tx) Repository // <-- TAMBAHKAN INI
+
 	// -- CATEGORY MANAGEMENT --
 	CreateCategory(ctx context.Context, data model.ProductCategory) error
 	FindAllCategories(ctx context.Context) ([]model.ProductCategory, error)
@@ -61,6 +64,10 @@ type Repository interface {
 
 	// -- SHOP MANAGEMENT --
 	FindShopByAccountID(ctx context.Context, accountID uuid.UUID) (model.Shop, error)
+
+	// -- PRODUCT MANAGEMENT
+	CreateProduct(ctx context.Context, product model.Product) (model.Product, error)
+	CreateProductImages(ctx context.Context, images []model.ProductImage) error
 }
 
 type ProductHandler interface {

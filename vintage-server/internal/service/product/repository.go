@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"vintage-server/internal/model"
+	"vintage-server/internal/shared"
 	"vintage-server/pkg/apperror"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 
 type repository struct {
 	db *sqlx.DB
+	tx *sqlx.Tx
 }
 
 func NewRepository(db *sqlx.DB) Repository {
@@ -25,6 +27,20 @@ func NewRepository(db *sqlx.DB) Repository {
 }
 
 const defaultQueryTimeout = 3 * time.Second
+
+func (r *repository) WithTx(tx *sqlx.Tx) Repository {
+	// Membuat kloningan repository dengan port 'tx' yang sudah terisi.
+	// Ini penting agar tidak mengganggu repository asli.
+	return &repository{db: r.db, tx: tx}
+}
+
+// getQuerier secara cerdas memilih antara transaksi atau koneksi DB biasa
+func (r *repository) getQuerier() shared.DBTX {
+	if r.tx != nil {
+		return r.tx // Ada transaksi? Pakai ini!
+	}
+	return r.db // Tidak ada? Pakai koneksi utama.
+}
 
 func (r *repository) withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, defaultQueryTimeout)
@@ -37,7 +53,12 @@ func (r *repository) CreateCategory(ctx context.Context, data model.ProductCateg
 
 	query := `INSERT INTO product_categories (name) VALUES ($1)`
 
-	_, err := r.db.ExecContext(ctx, query, data.Name)
+	// 1. Panggil pemilih otomatis
+	querier := r.getQuerier()
+
+	// 2. Gunakan 'querier' untuk menjalankan query
+	_, err := querier.ExecContext(ctx, query, data.Name)
+
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return apperror.New(apperror.ErrCodeConflict, "category with this name already exists")
@@ -345,4 +366,58 @@ func (r *repository) FindShopByAccountID(ctx context.Context, accountID uuid.UUI
 		return model.Shop{}, apperror.HandleDBError(err, "failed to find product condition by id")
 	}
 	return shop, nil
+}
+
+// -- PRODUCT MANAGEMENT
+func (r *repository) CreateProduct(ctx context.Context, product model.Product) (model.Product, error) {
+	var createdProduct model.Product
+	query := `
+        INSERT INTO products (shop_id, name, category_id, condition_id, price, stock, description, summary, brand_id, size_id)
+        VALUES (:shop_id, :name, :category_id, :condition_id, :price, :stock, :description, :summary, :brand_id, :size_id)
+        RETURNING *`
+
+	querier := r.getQuerier()
+
+	// Langkah 1: Siapkan query dan argumen menggunakan sqlx.Named
+	// Ini adalah fungsi dari package, bukan metode dari querier.
+	boundQuery, args, err := sqlx.Named(query, product)
+	if err != nil {
+		return model.Product{}, apperror.HandleDBError(err, "failed to bind named parameters")
+	}
+
+	// Langkah 2: Sesuaikan placeholder query ($1, $2 untuk Postgres)
+	boundQuery = querier.Rebind(boundQuery)
+
+	// Langkah 3: Eksekusi query dengan argumen yang sudah disiapkan
+	rows, err := querier.QueryxContext(ctx, boundQuery, args...)
+	if err != nil {
+		return model.Product{}, apperror.HandleDBError(err, "failed to create product")
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		if err := rows.StructScan(&createdProduct); err != nil {
+			return model.Product{}, apperror.HandleDBError(err, "failed to scan created product")
+		}
+	} else {
+		return model.Product{}, apperror.New(apperror.ErrCodeInternal, "failed to retrieve created product after insert")
+	}
+
+	return createdProduct, nil
+}
+
+func (r *repository) CreateProductImages(ctx context.Context, images []model.ProductImage) error {
+	if len(images) == 0 {
+		return nil
+	}
+	query := `INSERT INTO product_images (product_id, image_index, url) VALUES (:product_id, :image_index, :url)`
+	
+	querier := r.getQuerier()
+	
+	// Kode ini sudah benar dan aman
+	_, err := querier.NamedExecContext(ctx, query, images)
+	if err != nil {
+		return apperror.HandleDBError(err, "failed to create product images")
+	}
+	return nil
 }

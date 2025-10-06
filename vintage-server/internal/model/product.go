@@ -53,7 +53,7 @@ type Shop struct {
 // Product merepresentasikan tabel 'products'
 type Product struct {
 	ID          uuid.UUID `json:"id" db:"id"`
-	ShopID      int64     `json:"shop_id" db:"shop_id"`
+	ShopID      uuid.UUID `json:"shop_id" db:"shop_id"`
 	ConditionID int16     `json:"condition_id" db:"condition_id"`
 	CategoryID  int       `json:"category_id" db:"category_id"`
 	BrandID     *int      `json:"brand_id" db:"brand_id"`
@@ -71,7 +71,7 @@ type Product struct {
 // ProductImage merepresentasikan tabel 'product_images'
 type ProductImage struct {
 	ID         int64     `json:"id" db:"id"`
-	ProductID  int64     `json:"product_id" db:"product_id"`
+	ProductID  uuid.UUID `json:"product_id" db:"product_id"`
 	ImageIndex int16     `json:"image_index" db:"image_index"`
 	URL        string    `json:"url" db:"url"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
