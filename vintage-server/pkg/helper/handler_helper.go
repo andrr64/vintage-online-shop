@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"vintage-server/pkg/apperror"
 	"vintage-server/pkg/response"
 
@@ -57,4 +58,33 @@ func HandleError(c *gin.Context, err error) {
 
 func HandleErrorBadRequest(c *gin.Context) {
 	response.Success(c, http.StatusBadRequest, "Invalid request.")
+}
+
+// CheckBodyJSON melakukan binding JSON dari body request ke struct tujuan (t).
+// Jika gagal, akan mengembalikan error 400 (Bad Request).
+func CheckBodyJSON[T any](c *gin.Context, t *T) bool {
+	if err := c.ShouldBindJSON(t); err != nil {
+		response.ErrorBadRequest(c)
+		return false
+	}
+	return true
+}
+
+func CheckBody[T any](c *gin.Context, t *T) bool {
+	contentType := c.GetHeader("Content-Type")
+
+	var err error
+	if strings.HasPrefix(contentType, "application/json") {
+		err = c.ShouldBindJSON(t)
+	} else {
+		// Untuk form dan multipart form
+		err = c.ShouldBind(t)
+	}
+
+	if err != nil {
+		response.ErrorBadRequest(c)
+		return false
+	}
+
+	return true
 }

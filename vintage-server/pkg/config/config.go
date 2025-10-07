@@ -22,6 +22,7 @@ type Config struct {
 
 	UserServicePort    string `mapstructure:"USER_SERVICE_PORT"`
 	ProductServicePort string `mapstructure:"PRODUCT_SERVICE_PORT"`
+	ShopServicePort    string `mapstructure:"SHOP_SERVICE_PORT"`
 }
 
 // DSN (Data Source Name) mengembalikan connection string untuk database.
@@ -53,6 +54,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("CLOUDINARY_URL")
 	viper.BindEnv("PRODUCT_SERVICE_PORT")
 	viper.BindEnv("USER_SERVICE_PORT")
+	viper.BindEnv("SHOP_SERVICE_PORT")
 
 	// Unmarshal semua konfigurasi yang ditemukan ke dalam struct Config
 	err = viper.Unmarshal(&config)

@@ -15,7 +15,7 @@ import (
 func (h *Handler) CreateBrand(c *gin.Context) {
 	_, err := helper.CheckAuthAndRole(c, "admin")
 	if err != nil {
-		response.ErrorUnauthorized(c)
+		response.ErrorForbidden(c)
 		return
 	}
 

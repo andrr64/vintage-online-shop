@@ -19,12 +19,12 @@ type ProductSqlStore struct {
 	product.ProductRepository
 }
 
-// NewStore adalah "pintu masuk" utama dari aplikasi kita ke lapisan data.
+// NewProductStore adalah "pintu masuk" utama dari aplikasi kita ke lapisan data.
 // Ia membuat sebuah Store baru yang siap digunakan.
-func NewStore(db *sqlx.DB) ProductStore {
+func NewProductStore(db *sqlx.DB) ProductStore {
 	return &ProductSqlStore{
 		db:                db,
-		ProductRepository: NewRepository(db), // Menggunakan konstruktor Repository yang sudah kita buat
+		ProductRepository: NewProductRepository(db), // Menggunakan konstruktor Repository yang sudah kita buat
 	}
 }
 

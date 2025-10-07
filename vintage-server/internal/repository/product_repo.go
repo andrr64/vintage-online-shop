@@ -16,32 +16,32 @@ import (
 	"github.com/lib/pq"
 )
 
-type Repository struct {
+type productRepository struct {
 	db *sqlx.DB
 	tx *sqlx.Tx
 }
 
-const defaultQueryTimeout = 3 * time.Second
+const DefaultQueryTimeout = 3 * time.Second
 
 // -- PRIVATE FUNCTION
-func (r *Repository) getQuerier() db.DBTX {
+func (r *productRepository) GetQuerier() db.DBTX {
 	if r.tx != nil {
 		return r.tx
 	}
 	return r.db
 }
 
-func (r *Repository) withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, defaultQueryTimeout)
+func (r *productRepository) WithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, DefaultQueryTimeout)
 }
 
 // -- PRIVATE FUNCTION --
-func (r *Repository) getCount(ctx context.Context, query string, args ...interface{}) (int, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) GetCount(ctx context.Context, query string, args ...interface{}) (int, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var count int
-	if err := r.getQuerier().GetContext(ctx, &count, query, args...); err != nil {
+	if err := r.GetQuerier().GetContext(ctx, &count, query, args...); err != nil {
 		return 0, apperror.HandleDBError(err, "count query failed")
 	}
 	return count, nil
@@ -49,27 +49,27 @@ func (r *Repository) getCount(ctx context.Context, query string, args ...interfa
 
 // -- COUNT FUNCTION --
 // CountProductsByBrand implements product.ProductRepository.
-func (r *Repository) CountProductsByBrand(ctx context.Context, brandID int) (int, error) {
+func (r *productRepository) CountProductsByBrand(ctx context.Context, brandID int) (int, error) {
 	query := "SELECT COUNT(*) FROM products WHERE brand_id = $1"
-	return r.getCount(ctx, query, brandID)
+	return r.GetCount(ctx, query, brandID)
 }
 
 // CountProductsByCategory implements product.ProductRepository.
-func (r *Repository) CountProductsByCategory(ctx context.Context, categoryID int) (int, error) {
+func (r *productRepository) CountProductsByCategory(ctx context.Context, categoryID int) (int, error) {
 	query := "SELECT COUNT(*) FROM products WHERE category_id = $1"
-	return r.getCount(ctx, query, categoryID)
+	return r.GetCount(ctx, query, categoryID)
 }
 
 // CountProductsByCondition implements product.ProductRepository.
-func (r *Repository) CountProductsByCondition(ctx context.Context, conditionID int16) (int, error) {
+func (r *productRepository) CountProductsByCondition(ctx context.Context, conditionID int16) (int, error) {
 	query := "SELECT COUNT(*) FROM products WHERE condition_id = $1"
-	return r.getCount(ctx, query, conditionID)
+	return r.GetCount(ctx, query, conditionID)
 }
 
 // -- CREATE FUNCTION --
 // CreateBrand implements product.ProductRepository.
-func (r *Repository) CreateBrand(ctx context.Context, data model.Brand) (model.Brand, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) CreateBrand(ctx context.Context, data model.Brand) (model.Brand, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var brand model.Brand
@@ -85,8 +85,8 @@ func (r *Repository) CreateBrand(ctx context.Context, data model.Brand) (model.B
 }
 
 // CreateCategory implements product.ProductRepository.
-func (r *Repository) CreateCategory(ctx context.Context, data model.ProductCategory) (model.ProductCategory, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) CreateCategory(ctx context.Context, data model.ProductCategory) (model.ProductCategory, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var category model.ProductCategory
@@ -104,8 +104,8 @@ func (r *Repository) CreateCategory(ctx context.Context, data model.ProductCateg
 }
 
 // CreateCondition implements product.ProductRepository.
-func (r *Repository) CreateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) CreateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var condition model.ProductCondition
@@ -122,19 +122,19 @@ func (r *Repository) CreateCondition(ctx context.Context, data model.ProductCond
 }
 
 // CreateProduct implements product.ProductRepository.
-func (r *Repository) CreateProduct(ctx context.Context, product model.Product) (model.Product, error) {
+func (r *productRepository) CreateProduct(ctx context.Context, product model.Product) (model.Product, error) {
 	panic("unimplemented")
 }
 
 // CreateProductImages implements product.ProductRepository.
-func (r *Repository) CreateProductImages(ctx context.Context, images []model.ProductImage) error {
+func (r *productRepository) CreateProductImages(ctx context.Context, images []model.ProductImage) error {
 	panic("unimplemented")
 }
 
 // -- DELETE FUNCTION --
 // DeleteBrand implements product.ProductRepository.
-func (r *Repository) DeleteBrand(ctx context.Context, id int) error {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) DeleteBrand(ctx context.Context, id int) error {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	query := `DELETE FROM brands WHERE id = $1`
@@ -152,8 +152,8 @@ func (r *Repository) DeleteBrand(ctx context.Context, id int) error {
 }
 
 // DeleteCategory implements product.ProductRepository.
-func (r *Repository) DeleteCategory(ctx context.Context, categoryID int) error {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) DeleteCategory(ctx context.Context, categoryID int) error {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM product_categories WHERE id = $1"
 
@@ -169,7 +169,7 @@ func (r *Repository) DeleteCategory(ctx context.Context, categoryID int) error {
 }
 
 // DeleteCondition implements product.ProductRepository.
-func (r *Repository) DeleteCondition(ctx context.Context, id int16) error {
+func (r *productRepository) DeleteCondition(ctx context.Context, id int16) error {
 	query := `DELETE FROM product_conditions WHERE id = $1`
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -189,8 +189,8 @@ func (r *Repository) DeleteCondition(ctx context.Context, id int16) error {
 }
 
 // FindAllBrands implements product.ProductRepository.
-func (r *Repository) FindAllBrands(ctx context.Context) ([]model.Brand, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) FindAllBrands(ctx context.Context) ([]model.Brand, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var brands []model.Brand
@@ -204,8 +204,8 @@ func (r *Repository) FindAllBrands(ctx context.Context) ([]model.Brand, error) {
 }
 
 // FindAllCategories implements product.ProductRepository.
-func (r *Repository) FindAllCategories(ctx context.Context) ([]model.ProductCategory, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) FindAllCategories(ctx context.Context) ([]model.ProductCategory, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var categories []model.ProductCategory
@@ -218,8 +218,8 @@ func (r *Repository) FindAllCategories(ctx context.Context) ([]model.ProductCate
 }
 
 // FindAllConditions implements product.ProductRepository.
-func (r *Repository) FindAllConditions(ctx context.Context) ([]model.ProductCondition, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) FindAllConditions(ctx context.Context) ([]model.ProductCondition, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var conditions []model.ProductCondition
@@ -233,7 +233,7 @@ func (r *Repository) FindAllConditions(ctx context.Context) ([]model.ProductCond
 }
 
 // FindBrandByID implements product.ProductRepository.
-func (r *Repository) FindBrandByID(ctx context.Context, id int) (model.Brand, error) {
+func (r *productRepository) FindBrandByID(ctx context.Context, id int) (model.Brand, error) {
 	var brand model.Brand
 	query := `SELECT * FROM brands WHERE id = $1`
 
@@ -251,8 +251,8 @@ func (r *Repository) FindBrandByID(ctx context.Context, id int) (model.Brand, er
 }
 
 // FindCategoryById implements product.ProductRepository.
-func (r *Repository) FindCategoryById(ctx context.Context, id int) (model.ProductCategory, error) {
-	ctx, cancel := r.withTimeout(ctx)
+func (r *productRepository) FindCategoryById(ctx context.Context, id int) (model.ProductCategory, error) {
+	ctx, cancel := r.WithTimeout(ctx)
 	defer cancel()
 
 	var result model.ProductCategory
@@ -272,7 +272,7 @@ func (r *Repository) FindCategoryById(ctx context.Context, id int) (model.Produc
 }
 
 // FindConditionByID implements product.ProductRepository.
-func (r *Repository) FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error) {
+func (r *productRepository) FindConditionByID(ctx context.Context, id int16) (model.ProductCondition, error) {
 	var condition model.ProductCondition
 	query := `SELECT * FROM product_conditions WHERE id = $1`
 
@@ -288,7 +288,7 @@ func (r *Repository) FindConditionByID(ctx context.Context, id int16) (model.Pro
 }
 
 // FindShopByAccountID implements product.ProductRepository.
-func (r *Repository) FindShopByAccountID(ctx context.Context, accountID uuid.UUID) (model.Shop, error) {
+func (r *productRepository) FindShopByAccountID(ctx context.Context, accountID uuid.UUID) (model.Shop, error) {
 	var shop model.Shop
 	query := "SELECT * FROM shop WHERE account_id = $1"
 
@@ -302,27 +302,27 @@ func (r *Repository) FindShopByAccountID(ctx context.Context, accountID uuid.UUI
 }
 
 // UpdateBrand implements product.ProductRepository.
-func (r *Repository) UpdateBrand(ctx context.Context, data model.Brand) error {
+func (r *productRepository) UpdateBrand(ctx context.Context, data model.Brand) error {
 	panic("unimplemented")
 }
 
 // UpdateCategory implements product.ProductRepository.
-func (r *Repository) UpdateCategory(ctx context.Context, data model.ProductCategory) error {
+func (r *productRepository) UpdateCategory(ctx context.Context, data model.ProductCategory) error {
 	panic("unimplemented")
 }
 
 // UpdateCondition implements product.ProductRepository.
-func (r *Repository) UpdateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error) {
+func (r *productRepository) UpdateCondition(ctx context.Context, data model.ProductCondition) (model.ProductCondition, error) {
 	panic("unimplemented")
 }
 
 // WithTx implements product.ProductRepository.
-func (r *Repository) WithTx(tx *sqlx.Tx) product.ProductRepository {
-	return &Repository{db: r.db, tx: tx}
+func (r *productRepository) WithTx(tx *sqlx.Tx) product.ProductRepository {
+	return &productRepository{db: r.db, tx: tx}
 }
 
-func NewRepository(db *sqlx.DB) product.ProductRepository {
-	return &Repository{
+func NewProductRepository(db *sqlx.DB) product.ProductRepository {
+	return &productRepository{
 		db: db,
 	}
 }

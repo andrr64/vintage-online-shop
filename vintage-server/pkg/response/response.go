@@ -47,7 +47,7 @@ func Error(c *gin.Context, statusCode int, message string) {
 // =================================================================================
 
 func ErrorBadRequest(c *gin.Context, message ...string) {
-	msg := "Bad request"
+	msg := "Invalid request. Please double-check the data you submitted."
 	if len(message) > 0 {
 		msg = message[0]
 	}
@@ -68,7 +68,7 @@ func ErrorForbiddenRoles(c *gin.Context, roles ...string) {
 }
 
 func ErrorForbidden(c *gin.Context, message ...string) {
-	msg := "Forbidden"
+	msg := "Forbidden! you can't access this feature."
 	if len(message) > 0 {
 		msg = message[0]
 	}
