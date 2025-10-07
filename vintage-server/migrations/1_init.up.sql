@@ -4,9 +4,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- CORE TABLES
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(64) UNIQUE NOT NULL,
+    username VARCHAR(64) NOT NULL,
     password VARCHAR(60) NOT NULL,
-    email VARCHAR(64) UNIQUE,
+    email VARCHAR(64),
     avatar_url VARCHAR(255),
     active BOOLEAN DEFAULT FALSE,
     role SMALLINT NOT NULL DEFAULT 0,
