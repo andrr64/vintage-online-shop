@@ -6,13 +6,15 @@ import (
 	"errors"
 	"log"
 	"net/http"
+
+	"github.com/lib/pq"
 )
 
 const (
 	// ErrCodeValidation - 400 Bad Request
 	// Digunakan untuk error validasi input dari user.
 	ErrCodeValidation = http.StatusBadRequest
-	
+
 	ErrCodeBadRequest = http.StatusBadRequest
 
 	// ErrCodeUnauthorized - 401 Unauthorized
@@ -36,11 +38,10 @@ const (
 	ErrCodeInternal = http.StatusInternalServerError
 )
 
-
 type AppError struct {
-    Code    int
-    Message string
-    // Kamu bisa tambah field lain di sini, misal: TraceID, etc.
+	Code    int
+	Message string
+	// Kamu bisa tambah field lain di sini, misal: TraceID, etc.
 }
 
 // INI ADALAH KUNCINYA
@@ -57,19 +58,25 @@ func New(code int, message string) error {
 }
 
 func HandleDBError(err error, logContext string) error {
-	// Jika tidak ada error, kembalikan nil.
 	if err == nil {
 		return nil
 	}
 
-	// Jika error adalah sql.ErrNoRows, kita kembalikan error "NotFound".
-	// Nanti di service layer, ini bisa diubah lagi jika perlu (misal: menjadi Unauthorized).
+	// SQL no rows
 	if errors.Is(err, sql.ErrNoRows) {
 		return New(ErrCodeNotFound, "resource not found")
 	}
 
-	// Untuk semua error database lainnya, kita catat error teknisnya...
+	// bisa juga handle constraint violation
+	if pqErr, ok := err.(*pq.Error); ok {
+		switch pqErr.Code {
+		case "23505": // unique violation
+			return New(ErrCodeConflict, "duplicate entry")
+		case "23503": // foreign key violation
+			return New(ErrCodeBadRequest, "foreign key constraint violation")
+		}
+	}
+
 	log.Printf("%s: %v", logContext, err)
-	// ...dan kembalikan error internal yang generik ke user.
 	return New(ErrCodeInternal, "an internal error occurred")
 }

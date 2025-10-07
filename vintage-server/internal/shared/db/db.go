@@ -1,4 +1,4 @@
-package shared
+package db
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-
 type DBTX interface {
 	sqlx.ExtContext
 	sqlx.PreparerContext
@@ -15,7 +14,8 @@ type DBTX interface {
 	// NamedExecContext ada di *sqlx.DB dan *sqlx.Tx, jadi ini aman.
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 
-    // Kita butuh metode-metode ini untuk pendekatan manual
+	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	// Kita butuh metode-metode ini untuk pendekatan manual
 	Rebind(query string) string
 	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
 }

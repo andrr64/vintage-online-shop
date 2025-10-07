@@ -7,7 +7,9 @@ import (
 
 	"log"
 	"vintage-server/internal/database"
-	"vintage-server/internal/service/product"
+	handler "vintage-server/internal/handler/product"
+	service "vintage-server/internal/service/product"
+	repo "vintage-server/internal/repository"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -40,14 +42,14 @@ func main() {
 
 	// 3a. Buat instance Store, yang di dalamnya sudah ada Repository.
 	// Kita tidak lagi membuat Repository secara langsung di main.
-	productStore := product.NewStore(db)
+	productStore := repo.NewStore(db)
 
 	// 3b. Suntikkan (inject) Store dan service lain ke dalam Product Service.
 	// NewService sekarang menerima Store, bukan Repository.
-	productService := product.NewService(productStore, *authService, cloudinaryService)
+	productService := service.NewService(productStore, *authService, cloudinaryService)
 
 	// 3c. Suntikkan Product Service ke dalam Handler (tidak berubah).
-	productHandler := product.NewHandler(productService)
+	productHandler := handler.NewHandler(productService)
 	// highlight-end
 
 	// 4. Setup Router (tidak berubah)
