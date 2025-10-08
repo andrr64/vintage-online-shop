@@ -8,7 +8,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
-	user "vintage-server/internal/service/account" // Sesuaikan path
+	handler "vintage-server/internal/handler/account"
+	repository "vintage-server/internal/repository/account"
+	service "vintage-server/internal/service/account" // Sesuaikan path
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -31,16 +33,15 @@ func main() {
 	}
 
 	// 2. Merakit semua lapisan (Wiring)
-	cloudinaryService, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
+	cloudinary, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
 	if err != nil {
 		log.Fatalf("Failed to connec to Cloudinary service: %v", err)
 		return
-	}
+	}	
 
-	userRepo := user.NewRepository(db)
-	userService := user.NewService(userRepo, cfg.JWTSecretKey, cloudinaryService)
-	userHandler := user.NewHandler(userService)
-	authService := auth.NewJWTService(cfg.JWTSecretKey)
+	accountStore := repository.NewAccountStore(db)
+	accountService := service.NewService(accountStore, cfg.JWTSecretKey, cloudinary)
+	accountHandler := handler.NewAccountHandler(accountService)
 
 	// 3. Setup Router Gin
 	router := gin.Default()
@@ -52,30 +53,30 @@ func main() {
 		{
 			protected := account.Group("/protected")
 			{
-				protected.Use(middleware.AuthMiddleware(authService))
+				protected.Use(middleware.AuthMiddleware(auth.NewJWTService(cfg.JWTSecretKey)))
 				{
-					protected.POST("/logout", userHandler.Logout)
-					protected.PUT("/update-profile", userHandler.UpdateProfile)
-					protected.PUT("/update-avatar", userHandler.UpdateAvatar)
+					protected.POST("/logout", accountHandler.Logout)
+					protected.PUT("/update-profile", accountHandler.UpdateProfile)
+					protected.PUT("/update-avatar", accountHandler.UpdateAvatar)
 
-					protected.POST("/address", userHandler.CreateAddress)
-					protected.PUT("/address", userHandler.UpdateAddress)
-					protected.GET("/address", userHandler.GetAddresses)
-					protected.DELETE("/address", userHandler.DeleteAddress)
+					protected.POST("/address", accountHandler.CreateAddress)
+					protected.PUT("/address", accountHandler.UpdateAddress)
+					protected.GET("/address", accountHandler.GetAddresses)
+					protected.DELETE("/address", accountHandler.DeleteAddress)
 
-					protected.PUT("/address/set-primary", userHandler.SetPrimaryAddress)
+					protected.PUT("/address/set-primary", accountHandler.SetPrimaryAddress)
 				}
 			}
 
 			customer := account.Group("/customer")
 			{
-				customer.POST("/register", userHandler.RegisterCustomer)
-				customer.POST("/login", userHandler.LoginCustomer)
+				customer.POST("/register", accountHandler.RegisterCustomer)
+				customer.POST("/login", accountHandler.LoginCustomer)
 
 			}
 			admin := account.Group("/admin")
 			{
-				admin.POST("/login", userHandler.LoginAdmin)
+				admin.POST("/login", accountHandler.LoginAdmin)
 			}
 		}
 

@@ -41,13 +41,13 @@ type AccountService interface {
 	// --- User & Authentication ---
 	// Usecase: CustomerRegister
 	RegisterCustomer(ctx context.Context, req RegisterRequest) (UserProfileResponse, error)
-	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
 	UpdateProfile(ctx context.Context, userid uuid.UUID, req UpdateProfileRequest) (UserProfileResponse, error)
 	UpdateAvatar(ctx context.Context, userID uuid.UUID, file multipart.File) (UserProfileResponse, error)
 
 	LoginAdmin(ctx context.Context, req LoginRequest) (LoginResponse, error)
 	LoginSeller(ctx context.Context, req LoginRequest) (LoginResponse, error)
+	LoginCustomer(ctx context.Context, req LoginRequest) (LoginResponse, error)
 
 	Logout(ctx context.Context, userId uuid.UUID) (string, error)
 
