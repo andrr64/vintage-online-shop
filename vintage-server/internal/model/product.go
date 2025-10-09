@@ -41,7 +41,7 @@ type ProductSize struct {
 // Shop merepresentasikan tabel 'shop'
 type Shop struct {
 	ID          uuid.UUID `json:"id" db:"id"`
-	AccountID   int64     `json:"account_id" db:"account_id"`
+	AccountID   uuid.UUID `json:"account_id" db:"account_id"`
 	Name        string    `json:"name" db:"name"`
 	Summary     *string   `json:"summary" db:"summary"`
 	Description *string   `json:"description" db:"description"`

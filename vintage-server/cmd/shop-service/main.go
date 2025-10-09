@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"vintage-server/internal/database"
-	repo "vintage-server/internal/repository"
 	handler "vintage-server/internal/handler/shop"
+	repo "vintage-server/internal/repository"
 	service "vintage-server/internal/service/shop"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to Cloudinary service: %v", err)
 	}
-	
+
 	authService := auth.NewJWTService(cfg.JWTSecretKey)
 
 	shopStore := repo.NewShopStore(db)
@@ -43,15 +43,12 @@ func main() {
 
 	api := router.Group("/api/v1/shop")
 	{
-		management := api.Group("/management")
+		protected := api.Group("/protected")
 		{
-			protected := management.Group("/protected")
+			protected.Use(middleware.AuthMiddleware(authService))
 			{
-				protected.Use(middleware.AuthMiddleware(authService))
-				{
-					protected.POST("/create", shopHandler.CreateShop)
-					protected.PUT("/update", shopHandler.UpdateShop)
-				}
+				protected.POST("/create", shopHandler.CreateShop)
+				protected.PUT("/update", shopHandler.UpdateShop)
 			}
 		}
 	}

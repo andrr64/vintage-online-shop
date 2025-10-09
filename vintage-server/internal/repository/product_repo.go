@@ -21,7 +21,7 @@ type productRepository struct {
 	tx *sqlx.Tx
 }
 
-const DefaultQueryTimeout = 3 * time.Second
+const DefaultQueryTimeout = 15 * time.Second
 
 // -- PRIVATE FUNCTION
 func (r *productRepository) GetQuerier() db.DBTX {
