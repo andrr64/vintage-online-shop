@@ -78,6 +78,11 @@ func main() {
 			{
 				admin.POST("/login", accountHandler.LoginAdmin)
 			}
+
+			seller := account.Group("/seller")
+			{
+				seller.POST("/login", accountHandler.LoginSeller)
+			}
 		}
 
 	}

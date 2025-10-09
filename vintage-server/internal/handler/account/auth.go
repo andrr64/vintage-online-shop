@@ -72,7 +72,10 @@ func (h *handler) LoginAdmin(c *gin.Context) {
 
 func (h *handler) LoginSeller(c *gin.Context) {
 	var req account.LoginRequest
-
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
 	loginResponse, err := h.svc.LoginSeller(c.Request.Context(), req)
 
 	if err != nil {

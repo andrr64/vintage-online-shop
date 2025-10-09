@@ -15,143 +15,61 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *accountService) LoginCustomer(ctx context.Context, req account.LoginRequest) (account.LoginResponse, error) {
-	roleName := "customer"
+// loginWithRole adalah fungsi umum untuk login berdasarkan role.
+func (s *accountService) loginWithRole(ctx context.Context, req account.LoginRequest, roleName string) (account.LoginResponse, error) {
 	var acc model.Account
 	var err error
 
+	// Cek apakah identifier berupa email atau username
 	if strings.Contains(req.Identifier, "@") {
 		acc, err = s.store.FindAccountByEmailWithRole(ctx, req.Identifier, roleName)
 	} else {
 		acc, err = s.store.FindAccountByUsernameWithRole(ctx, req.Identifier, roleName)
 	}
 
+	// Tangani error pencarian akun
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("[WARN] Akun dengan role '%s' tidak ditemukan untuk identifier '%s'", roleName, req.Identifier)
 			return account.LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid credentials")
 		}
-		log.Printf("Error finding account for login: %v", err)
+		log.Printf("[ERROR] Gagal mencari akun '%s': %v", roleName, err)
 		return account.LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
 	}
 
+	// Verifikasi password
 	if err := hash.Verify(acc.Password, req.Password); err != nil {
+		log.Printf("[WARN] Password salah untuk akun '%s'", acc.Email)
 		return account.LoginResponse{}, apperror.New(apperror.ErrCodeUnauthorized, "invalid credentials")
 	}
 
+	// Generate JWT token
 	token, err := s.jwt.GenerateToken(acc.ID, roleName)
 	if err != nil {
-		log.Printf("Error generating token: %v", err)
-		return account.LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "an internal error occurred")
+		log.Printf("[ERROR] Gagal generate token untuk akun '%s': %v", acc.Email, err)
+		return account.LoginResponse{}, apperror.New(apperror.ErrCodeInternal, "failed to generate token")
 	}
 
+	// Return hasil login
 	return account.LoginResponse{
 		AccessToken: token,
 		UserProfile: account.ConvertAccountToUserProfileResponse(&acc),
 	}, nil
 }
 
-// LoginAdmin authenticates an admin user using email or username
+// LoginCustomer authenticates a customer user
+func (s *accountService) LoginCustomer(ctx context.Context, req account.LoginRequest) (account.LoginResponse, error) {
+	return s.loginWithRole(ctx, req, "customer")
+}
+
+// LoginAdmin authenticates an admin user
 func (s *accountService) LoginAdmin(ctx context.Context, req account.LoginRequest) (account.LoginResponse, error) {
-	role := "admin"
-
-	// 1. Cari akun admin berdasarkan email atau username
-	acc, err := func() (model.Account, error) {
-		if strings.Contains(req.Identifier, "@") {
-			return s.store.FindAccountByEmailWithRole(ctx, req.Identifier, role)
-		}
-		return s.store.FindAccountByUsernameWithRole(ctx, req.Identifier, role)
-	}()
-
-	// 2. Tangani error saat pencarian
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return account.LoginResponse{}, apperror.New(
-				apperror.ErrCodeUnauthorized,
-				"invalid credentials",
-			)
-		}
-		log.Printf("Error finding admin account: %v", err)
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeInternal,
-			"an internal error occurred",
-		)
-	}
-
-	// 3. Verifikasi password
-	if err := hash.Verify(acc.Password, req.Password); err != nil {
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeUnauthorized,
-			"invalid credentials",
-		)
-	}
-
-	// 4. Generate token JWT
-	token, err := s.jwt.GenerateToken(acc.ID, role)
-	if err != nil {
-		log.Printf("Error generating admin token: %v", err)
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeInternal,
-			"failed to generate token",
-		)
-	}
-
-	// 5. Return response
-	return account.LoginResponse{
-		AccessToken: token,
-		UserProfile: account.ConvertAccountToUserProfileResponse(&acc),
-	}, nil
+	return s.loginWithRole(ctx, req, "admin")
 }
 
-// LoginSeller authenticates a seller user using email or username
+// LoginSeller authenticates a seller user
 func (s *accountService) LoginSeller(ctx context.Context, req account.LoginRequest) (account.LoginResponse, error) {
-	role := "seller"
-
-	// 1. Cari akun seller berdasarkan email atau username
-	acc, err := func() (model.Account, error) {
-		if strings.Contains(req.Identifier, "@") {
-			return s.store.FindAccountByEmailWithRole(ctx, req.Identifier, role)
-		}
-		return s.store.FindAccountByUsernameWithRole(ctx, req.Identifier, role)
-	}()
-
-	// 2. Tangani error saat pencarian
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return account.LoginResponse{}, apperror.New(
-				apperror.ErrCodeUnauthorized,
-				"invalid credentials",
-			)
-		}
-		log.Printf("Error finding seller account: %v", err)
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeInternal,
-			"an internal error occurred",
-		)
-	}
-
-	// 3. Verifikasi password
-	if err := hash.Verify(acc.Password, req.Password); err != nil {
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeUnauthorized,
-			"invalid credentials",
-		)
-	}
-
-	// 4. Generate token JWT
-	token, err := s.jwt.GenerateToken(acc.ID, role)
-	if err != nil {
-		log.Printf("Error generating seller token: %v", err)
-		return account.LoginResponse{}, apperror.New(
-			apperror.ErrCodeInternal,
-			"failed to generate token",
-		)
-	}
-
-	// 5. Return response
-	return account.LoginResponse{
-		AccessToken: token,
-		UserProfile: account.ConvertAccountToUserProfileResponse(&acc),
-	}, nil
+	return s.loginWithRole(ctx, req, "seller")
 }
 
 // Logout tetap sederhana
