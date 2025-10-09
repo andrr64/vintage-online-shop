@@ -10,7 +10,7 @@ import (
 )
 
 func (r *sqlAccountRepository) InsertAccount(ctx context.Context, account model.Account) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	query := `
@@ -38,7 +38,7 @@ func (r *sqlAccountRepository) InsertAccount(ctx context.Context, account model.
 
 // GetRoleIDByName implements account.AccountRepository.
 func (r *sqlAccountRepository) GetRoleIDByName(ctx context.Context, roleName string) (int64, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var roleID int64
@@ -52,7 +52,7 @@ func (r *sqlAccountRepository) GetRoleIDByName(ctx context.Context, roleName str
 
 // InsertAccountRole implements account.AccountRepository.
 func (r *sqlAccountRepository) InsertAccountRole(ctx context.Context, accountID uuid.UUID, roleID int64) error {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	_, err := r.db.ExecContext(ctx,
@@ -63,7 +63,7 @@ func (r *sqlAccountRepository) InsertAccountRole(ctx context.Context, accountID 
 
 // FindAccountByEmail implements account.AccountRepository.
 func (r *sqlAccountRepository) FindAccountByEmail(ctx context.Context, email string) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var account model.Account
@@ -79,7 +79,7 @@ func (r *sqlAccountRepository) FindAccountByEmail(ctx context.Context, email str
 
 // FindAccountByEmailWithRole implements account.AccountRepository.
 func (r *sqlAccountRepository) FindAccountByEmailWithRole(ctx context.Context, email string, roleName string) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var account model.Account
@@ -97,7 +97,7 @@ func (r *sqlAccountRepository) FindAccountByEmailWithRole(ctx context.Context, e
 
 // FindAccountByID implements account.AccountRepository.
 func (r *sqlAccountRepository) FindAccountByID(ctx context.Context, id uuid.UUID) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var account model.Account
@@ -108,7 +108,7 @@ func (r *sqlAccountRepository) FindAccountByID(ctx context.Context, id uuid.UUID
 
 // FindAccountByUsername implements account.AccountRepository.
 func (r *sqlAccountRepository) FindAccountByUsername(ctx context.Context, username string) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var account model.Account
@@ -124,7 +124,7 @@ func (r *sqlAccountRepository) FindAccountByUsername(ctx context.Context, userna
 
 // FindAccountByUsernameWithRole implements account.AccountRepository.
 func (r *sqlAccountRepository) FindAccountByUsernameWithRole(ctx context.Context, username string, roleName string) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var account model.Account
@@ -142,7 +142,7 @@ func (r *sqlAccountRepository) FindAccountByUsernameWithRole(ctx context.Context
 
 // IsUsernameUsed implements account.AccountRepository.
 func (r *sqlAccountRepository) IsUsernameUsed(ctx context.Context, username string) (bool, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	var exists bool
@@ -156,7 +156,7 @@ func (r *sqlAccountRepository) IsUsernameUsed(ctx context.Context, username stri
 
 // UpdateAccount implements account.AccountRepository.
 func (r *sqlAccountRepository) UpdateAccount(ctx context.Context, account model.Account) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	query := `
@@ -187,7 +187,7 @@ func (r *sqlAccountRepository) UpdateAccount(ctx context.Context, account model.
 
 // UpdateAvatarTx implements account.AccountRepository.
 func (r *sqlAccountRepository) UpdateAvatar(ctx context.Context, avatarUrl string, id uuid.UUID) (model.Account, error) {
-	ctx, cancel := controller.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := controller.WithQueryTimeout(ctx)
 	defer cancel()
 
 	query := `
