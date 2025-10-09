@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"vintage-server/internal/domain/product"
+	product "vintage-server/internal/domain"
 	"vintage-server/internal/model"
 	"vintage-server/internal/repository"
 	"vintage-server/pkg/apperror"

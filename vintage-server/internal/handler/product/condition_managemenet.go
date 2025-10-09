@@ -3,7 +3,7 @@ package product
 import (
 	"net/http"
 	"strconv"
-	"vintage-server/internal/domain/product"
+	"vintage-server/internal/domain"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 

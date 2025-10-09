@@ -1,7 +1,7 @@
 package product
 
 import (
-	"vintage-server/internal/domain/product"
+	product "vintage-server/internal/domain"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 

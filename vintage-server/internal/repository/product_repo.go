@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 	"time"
-	"vintage-server/internal/domain/product"
+	product "vintage-server/internal/domain"
 	"vintage-server/internal/model"
 	"vintage-server/internal/shared/db"
 	"vintage-server/pkg/apperror"
