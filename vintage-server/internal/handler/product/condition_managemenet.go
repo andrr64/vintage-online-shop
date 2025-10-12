@@ -3,7 +3,7 @@ package product
 import (
 	"net/http"
 	"strconv"
-	"vintage-server/internal/domain"
+	product "vintage-server/internal/domain"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 
@@ -11,13 +11,7 @@ import (
 )
 
 // -- PRODUCT CONDITION MANAGEMENET --
-func (h *Handler) CreateCondition(c *gin.Context) {
-	_, err := helper.CheckAuthAndRole(c, "admin")
-	if err != nil {
-		response.ErrorUnauthorized(c)
-		return
-	}
-
+func (h *handler) CreateCondition(c *gin.Context) {
 	var req product.ProductConditionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helper.HandleErrorBadRequest(c)
@@ -33,7 +27,7 @@ func (h *Handler) CreateCondition(c *gin.Context) {
 	response.Success(c, http.StatusCreated, newCondition)
 }
 
-func (h *Handler) ReadConditions(c *gin.Context) {
+func (h *handler) ReadConditions(c *gin.Context) {
 	idStr := c.Query("id")
 
 	// Jika ada query parameter 'id', cari satu data
@@ -59,11 +53,10 @@ func (h *Handler) ReadConditions(c *gin.Context) {
 		helper.HandleError(c, err)
 		return
 	}
-
 	response.Success(c, http.StatusOK, conditions)
 }
 
-func (h *Handler) UpdateCondition(c *gin.Context) {
+func (h *handler) UpdateCondition(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -86,7 +79,7 @@ func (h *Handler) UpdateCondition(c *gin.Context) {
 	response.Success(c, http.StatusOK, updatedCondition)
 }
 
-func (h *Handler) DeleteCondition(c *gin.Context) {
+func (h *handler) DeleteCondition(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -99,6 +92,5 @@ func (h *Handler) DeleteCondition(c *gin.Context) {
 		helper.HandleError(c, err)
 		return
 	}
-
-	response.Success(c, http.StatusOK, gin.H{"message": "Product condition deleted successfully"})
+	response.SuccessWD_OK(c)
 }

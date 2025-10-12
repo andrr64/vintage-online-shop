@@ -3,7 +3,7 @@ package product
 import (
 	"net/http"
 	"strconv"
-	"vintage-server/internal/domain"
+	product "vintage-server/internal/domain"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 	"vintage-server/pkg/utils"
@@ -12,7 +12,7 @@ import (
 )
 
 // -- BRAND MANAGEMENT --
-func (h *Handler) CreateBrand(c *gin.Context) {
+func (h *handler) CreateBrand(c *gin.Context) {
 	_, err := helper.CheckAuthAndRole(c, "admin")
 	if err != nil {
 		response.ErrorForbidden(c)
@@ -46,7 +46,7 @@ func (h *Handler) CreateBrand(c *gin.Context) {
 	defer file.Close()
 
 	// 4. Buat request DTO untuk service
-	req := product.CreateBrandRequest{
+	req := product.BrandRequest{
 		Name:       name,
 		File:       file,
 		FileHeader: fileHeader,
@@ -61,8 +61,13 @@ func (h *Handler) CreateBrand(c *gin.Context) {
 	response.Success(c, http.StatusCreated, brand)
 }
 
-func (h *Handler) UpdateBrand(c *gin.Context) {
-	id, err := strconv.Atoi(c.Query("id"))
+func (h *handler) UpdateBrand(c *gin.Context) {
+	_, err := helper.CheckAuthAndRole(c, "admin")
+	if err != nil {
+		response.ErrorForbidden(c)
+		return
+	}
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid request")
 		return
@@ -76,7 +81,7 @@ func (h *Handler) UpdateBrand(c *gin.Context) {
 	}
 
 	// Siapkan request untuk service
-	req := product.UpdateBrandRequest{
+	req := product.BrandRequest{
 		Name: name,
 	}
 
@@ -115,7 +120,7 @@ func (h *Handler) UpdateBrand(c *gin.Context) {
 	response.Success(c, http.StatusOK, gin.H{"message": "brand updated successfully"})
 }
 
-func (h *Handler) ReadBrand(c *gin.Context) {
+func (h *handler) ReadBrand(c *gin.Context) {
 	var data interface{}
 	var err error
 
@@ -151,7 +156,7 @@ func (h *Handler) ReadBrand(c *gin.Context) {
 	response.Success(c, http.StatusOK, data)
 }
 
-func (h *Handler) FindBrandByID(c *gin.Context) {
+func (h *handler) FindBrandByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid brand ID format")
@@ -166,8 +171,8 @@ func (h *Handler) FindBrandByID(c *gin.Context) {
 	response.Success(c, http.StatusOK, brand)
 }
 
-func (h *Handler) DeleteBrand(c *gin.Context) {
-	id, err := strconv.Atoi(c.Query("id"))
+func (h *handler) DeleteBrand(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid brand ID format")
 		return
@@ -180,4 +185,3 @@ func (h *Handler) DeleteBrand(c *gin.Context) {
 	}
 	response.Success(c, http.StatusOK, gin.H{"message": "brand deleted successfully"})
 }
-

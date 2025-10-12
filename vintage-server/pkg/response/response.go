@@ -25,7 +25,11 @@ func Success[T any](c *gin.Context, statusCode int, data T) {
 }
 
 func SuccessWD_Created(c *gin.Context) {
-	SuccessWithoutData(c, http.StatusCreated, "Created")
+	SuccessWithoutData(c, http.StatusCreated, "Created successfully")
+}
+
+func SuccessCreated[T any](c *gin.Context, data T) {
+	Success(c, http.StatusCreated, data)
 }
 
 func SuccessWD_OK(c *gin.Context) {

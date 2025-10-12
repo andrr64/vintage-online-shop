@@ -9,7 +9,7 @@ import (
 	"vintage-server/internal/database"
 	handler "vintage-server/internal/handler/product"
 	repo "vintage-server/internal/repository"
-	service "vintage-server/internal/service/product"
+	service "vintage-server/internal/service"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -24,33 +24,20 @@ func main() {
 		log.Fatalf("could not load config: %v", err)
 	}
 
-	// 1. Koneksi Database (tidak berubah)
 	db, err := database.NewPostgres(cfg.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
 
-	// 2. Inisialisasi semua service eksternal (tidak berubah)
 	cloudinaryService, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to Cloudinary service: %v", err)
 	}
 	authService := auth.NewJWTService(cfg.JWTSecretKey)
 
-	// highlight-start
-	// 3. RAKITAN ARSITEKTUR BARU
-
-	// 3a. Buat instance Store, yang di dalamnya sudah ada Repository.
-	// Kita tidak lagi membuat Repository secara langsung di main.
 	productStore := repo.NewProductStore(db)
-
-	// 3b. Suntikkan (inject) Store dan service lain ke dalam Product Service.
-	// NewService sekarang menerima Store, bukan Repository.
-	productService := service.NewService(productStore, *authService, cloudinaryService)
-
-	// 3c. Suntikkan Product Service ke dalam Handler (tidak berubah).
+	productService := service.NewProductService(productStore, *authService, cloudinaryService)
 	productHandler := handler.NewHandler(productService)
-	// highlight-end
 
 	// 4. Setup Router (tidak berubah)
 	router := gin.Default()
@@ -63,28 +50,34 @@ func main() {
 			productGroup.GET("/category", productHandler.ReadCategories)
 			productGroup.GET("/brand", productHandler.ReadBrand)
 			productGroup.GET("/condition", productHandler.ReadConditions)
+			productGroup.GET("/:id", productHandler.GetProuctByID)
 
 			// Rute Terproteksi
-			protected := productGroup.Group("/protected", middleware.AuthMiddleware(authService))
+			protected := productGroup.Group(
+				"/protected",
+				middleware.AuthMiddleware(authService))
 			{
 				// Category
-				protected.POST("/category", productHandler.CreateCategory)
-				protected.PUT("/category/:id", productHandler.UpdateCategory) // Gunakan path param untuk konsistensi
-				protected.DELETE("/category/:id", productHandler.DeleteCategory)
+				protected.POST("/category", middleware.AuthRoleMiddleware("admin"), productHandler.CreateCategory)
+				protected.PUT("/category/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateCategory) // Gunakan path param untuk konsistensi
+				protected.DELETE("/category/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCategory)
 
 				// Brand
-				protected.POST("/brand", productHandler.CreateBrand)
-				protected.PUT("/brand/:id", productHandler.UpdateBrand)
-				protected.DELETE("/brand/:id", productHandler.DeleteBrand)
+				protected.POST("/brand", middleware.AuthRoleMiddleware("admin"), productHandler.CreateBrand)
+				protected.PUT("/brand/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateBrand)
+				protected.DELETE("/brand/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteBrand)
 
 				// Condition
-				protected.POST("/condition", productHandler.CreateCondition)
-				protected.PUT("/condition/:id", productHandler.UpdateCondition)
-				protected.DELETE("/condition/:id", productHandler.DeleteCondition)
+				protected.POST("/condition", middleware.AuthRoleMiddleware("admin"), productHandler.CreateCondition)
+				protected.PUT("/condition/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateCondition)
+				protected.DELETE("/condition/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCondition)
 
 				// Product
-				protected.POST("", productHandler.CreateProduct)
-				// Tambahkan rute product lainnya di sini (GET, PUT, DELETE)
+				protected.POST("/product/create", middleware.AuthRoleMiddleware("seller"), productHandler.CreateProduct)
+				protected.PUT("/product/update", middleware.AuthRoleMiddleware("seller"), productHandler.UpdateProduct)
+
+				// Size
+				protected.POST("/size", middleware.AuthRoleMiddleware("admin"), productHandler.CreateProductSize)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"time"
 	"vintage-server/internal/domain/account"
 	"vintage-server/internal/shared/db"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -12,7 +13,6 @@ type sqlAccountRepository struct {
 }
 
 const DefaultQueryTimeout = 15 * time.Second
-
 
 func (r *sqlAccountRepository) WithTx(tx *sqlx.Tx) account.AccountRepository {
 	return &sqlAccountRepository{

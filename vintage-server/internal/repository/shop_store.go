@@ -19,9 +19,9 @@ type ShopSqlStore struct {
 }
 
 func NewShopStore(db *sqlx.DB) ShopStore {
-	return &ShopSqlStore {
-		db: db,
-		ShopRepository: NewShopRepository(db),		
+	return &ShopSqlStore{
+		db:             db,
+		ShopRepository: NewShopRepository(db),
 	}
 }
 

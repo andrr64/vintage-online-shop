@@ -72,4 +72,3 @@ func (s *accountService) UpdateAvatar(ctx context.Context, accountID uuid.UUID, 
 
 	return account.ConvertAccountToUserProfileResponse(&acc), nil
 }
-

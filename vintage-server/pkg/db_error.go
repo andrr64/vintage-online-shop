@@ -1,6 +1,7 @@
 package db_error
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/lib/pq"
@@ -8,11 +9,17 @@ import (
 )
 
 // constraintMessages berisi daftar constraint PostgreSQL dan pesan custom-nya.
-// Tambahkan sesuai kebutuhan projekmu.
 var constraintMessages = map[string]string{
-	"shop_account_id_key": "Anda hanya boleh memiliki satu toko.",
-	"accounts_email_key":  "Email sudah terdaftar.",
-	"shops_name_key":      "Nama toko sudah digunakan.",
+	"shop_account_id_key":               "Anda hanya boleh memiliki satu toko.",
+	"accounts_email_key":                "Email sudah terdaftar.",
+	"shops_name_key":                    "Nama toko sudah digunakan.",
+	"product_condition_name_lower_idx":  "Nama kondisi sudah digunakan.",
+	"product_categories_name_lower_idx": "Nama kategori sudah digunakan.",
+	"products_condition_id_fkey":        "Condition tidak ditemukan.",
+	"products_category_id_fkey":         "Kategori tidak ditemukan.",
+	"products_brand_id_fkey":            "Brand tidak ditemukan.",
+	"products_shop_id_fkey":             "Toko tidak ditemukan.",
+	"products_size_id_fkey":             "Size tidak ditemukan.",
 }
 
 // HandlePgError memeriksa apakah error berasal dari PostgreSQL,
@@ -20,6 +27,11 @@ var constraintMessages = map[string]string{
 func HandlePgError(err error) error {
 	if err == nil {
 		return nil
+	}
+
+	// ✅ Tangani error ketika data tidak ditemukan
+	if err == sql.ErrNoRows {
+		return apperror.New(http.StatusNotFound, "Data tidak ditemukan.")
 	}
 
 	pqErr, ok := err.(*pq.Error)

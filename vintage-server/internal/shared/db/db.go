@@ -18,4 +18,6 @@ type DBTX interface {
 	Rebind(query string) string
 	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }

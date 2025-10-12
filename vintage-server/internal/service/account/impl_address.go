@@ -49,7 +49,6 @@ func (s *accountService) GetAddressesByUserID(ctx context.Context, accountID uui
 	return account.ConvertAddressesToDTO(addrs), nil
 }
 
-
 // SetPrimaryAddress sets a specific address as the user's primary one.
 func (s *accountService) SetPrimaryAddress(ctx context.Context, accountID uuid.UUID, addressID int64) error {
 	if err := s.store.SetPrimaryAddress(ctx, accountID, addressID); err != nil {

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"vintage-server/internal/domain"
+	product "vintage-server/internal/domain"
 
 	"github.com/jmoiron/sqlx"
 )

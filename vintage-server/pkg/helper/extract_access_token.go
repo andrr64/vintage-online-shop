@@ -38,3 +38,17 @@ func ExtractAccountInfoFromToken(c *gin.Context) (uuid.UUID, *string, error) {
 
 	return accountID, &role, nil
 }
+
+func ExtractAccountID(c *gin.Context) (uuid.UUID, error) {
+	accountIDv, exists := c.Get("accountID")
+	if !exists {
+		return uuid.Nil, ErrAccountIDNotFound
+	}
+
+	accountID, ok := accountIDv.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, ErrInvalidAccountID
+	}
+
+	return accountID, nil
+}

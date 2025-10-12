@@ -10,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
-
 func (h *handler) UpdateProfile(c *gin.Context) {
 	// Gunakan helper untuk otentikasi dan otorisasi role "customer"
 	accountID, err := helper.CheckAuthAndRole(c, "customer")

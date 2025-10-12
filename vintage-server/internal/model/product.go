@@ -34,8 +34,8 @@ type Brand struct {
 
 // ProductSize merepresentasikan tabel 'product_size'
 type ProductSize struct {
-	ID       int    `json:"id" db:"id"`
-	SizeName string `json:"size_name" db:"size_name"`
+	ID   int    `json:"id" db:"id"`
+	Name string `json:"name" db:"name"`
 }
 
 // Shop merepresentasikan tabel 'shop'
@@ -66,6 +66,14 @@ type Product struct {
 	IsLatest    bool      `json:"is_latest" db:"is_latest"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+
+	// 🔽 Relasi (bukan dari DB langsung)
+	Images    []ProductImage    `json:"images,omitempty" db:"-"`
+	Brand     *Brand            `json:"brand,omitempty" db:"-"`
+	Category  *ProductCategory  `json:"category,omitempty" db:"-"`
+	Condition *ProductCondition `json:"condition,omitempty" db:"-"`
+	Size      *ProductSize      `json:"size,omitempty" db:"-"`
+	Shop      *Shop             `json:"shop,omitempty" db:"-"`
 }
 
 // ProductImage merepresentasikan tabel 'product_images'
