@@ -20,6 +20,8 @@ var constraintMessages = map[string]string{
 	"products_brand_id_fkey":            "Brand tidak ditemukan.",
 	"products_shop_id_fkey":             "Toko tidak ditemukan.",
 	"products_size_id_fkey":             "Size tidak ditemukan.",
+	"wishlist_account_id_fkey" :		"Akun tidak ditemukan.",
+	"wishlist_product_id_fkey" :		"Produk tidak ditemukan.",
 }
 
 // HandlePgError memeriksa apakah error berasal dari PostgreSQL,
