@@ -24,3 +24,5 @@ func (r *sqlAccountRepository) WithTx(tx *sqlx.Tx) account.AccountRepository {
 func NewAccountRepository(db *sqlx.DB) account.AccountRepository {
 	return &sqlAccountRepository{db: db}
 }
+
+

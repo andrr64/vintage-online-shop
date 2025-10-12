@@ -1,6 +1,8 @@
 package account
 
 import (
+	"strconv"
+	"vintage-server/internal/domain/account"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
 
@@ -31,7 +33,38 @@ func (h *handler) AddToWishlist(c *gin.Context) {
 
 // GetWishlist implements account.AccountHandler.
 func (h *handler) GetWishlist(c *gin.Context) {
-	panic("unimplemented")
+	accountID, err := helper.ExtractAccountID(c)
+	if err != nil {
+		helper.HandleError(c, err)
+		return
+	}
+
+	// Ambil query params
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
+	keyword := c.Query("keyword")
+
+	// Validasi nilai
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 10
+	}
+
+	data := account.WishlistFilter{
+		Page:      page,
+		Size:      size,
+		Keyword:   keyword,
+		AccountID: accountID,
+	}
+
+	result, err := h.svc.GetWishlistByUserID(c.Request.Context(), data)
+	if err != nil {
+		helper.HandleError(c, err)
+		return
+	}
+	response.SuccessOK(c, result)
 }
 
 // RemoveFromWishlist implements account.AccountHandler.

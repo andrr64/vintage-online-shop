@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"vintage-server/internal/domain/account"
 	"vintage-server/internal/model"
 
 	"github.com/google/uuid"
@@ -57,28 +56,50 @@ func (r *sqlAccountRepository) SaveWishlistItem(ctx context.Context, item model.
 }
 
 // FindWishlistByAccountID implements account.AccountRepository.
-func (r *sqlAccountRepository) FindWishlistByAccountID(ctx context.Context, accountID int64) ([]account.WishlistItemDetail, error) {
+// Mengembalikan slice model.Wishlist + total count (untuk pagination)
+func (r *sqlAccountRepository) FindWishlistByAccountID(
+	ctx context.Context,
+	accountID uuid.UUID,
+	keyword string,
+	limit, offset int,
+) ([]model.Wishlist, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
 	defer cancel()
 
-	var wishlistItems []account.WishlistItemDetail
+	// 1) Ambil rows wishlist (filter optional by product name via JOIN)
 	query := `
 		SELECT 
+			w.id,
+			w.account_id,
 			w.product_id,
-			p.name AS product_name,
-			p.price,
-			pi.url AS product_image_url,
-			w.created_at
+			w.created_at,
+			w.updated_at
 		FROM wishlist w
 		JOIN products p ON w.product_id = p.id
-		LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.image_index = 0
 		WHERE w.account_id = $1
+		  AND ($2 = '' OR p.name ILIKE '%' || $2 || '%')
 		ORDER BY w.created_at DESC
+		LIMIT $3 OFFSET $4
 	`
 
-	if err := r.db.SelectContext(ctx, &wishlistItems, query, accountID); err != nil {
-		return nil, err
+	var wishlists []model.Wishlist
+	if err := r.db.SelectContext(ctx, &wishlists, query, accountID, keyword, limit, offset); err != nil {
+		return nil, 0, err
 	}
 
-	return wishlistItems, nil
+	// 2) Hitung total item sesuai filter (tanpa limit/offset)
+	countQuery := `
+		SELECT COUNT(*)
+		FROM wishlist w
+		JOIN products p ON w.product_id = p.id
+		WHERE w.account_id = $1
+		  AND ($2 = '' OR p.name ILIKE '%' || $2 || '%')
+	`
+
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery, accountID, keyword); err != nil {
+		return nil, 0, err
+	}
+
+	return wishlists, total, nil
 }

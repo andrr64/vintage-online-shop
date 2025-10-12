@@ -170,3 +170,76 @@ func (r *sqlAccountRepository) UpdateAvatar(ctx context.Context, avatarUrl strin
 
 	return savedAccount, nil
 }
+
+
+func (r *sqlAccountRepository) FindProductByID(ctx context.Context, productID uuid.UUID) (model.Product, error) {
+	// 🔹 Ambil data utama produk
+	query := `
+		SELECT 
+			p.id, p.shop_id, p.condition_id, p.category_id, p.brand_id, p.size_id,
+			p.name, p.summary, p.description, p.price, p.stock,
+			p.created_at, p.updated_at
+		FROM products p
+		WHERE p.id = $1
+	`
+	var product model.Product
+	if err := r.db.GetContext(ctx, &product, query, productID); err != nil {
+		return model.Product{}, err
+	}
+
+	// 🔹 Ambil relasi: Brand
+	if product.BrandID != nil {
+		var brand model.Brand
+		err := r.db.GetContext(ctx, &brand, `SELECT id, name, logo_url, created_at, updated_at FROM brands WHERE id = $1`, *product.BrandID)
+		if err == nil {
+			product.Brand = &brand
+		}
+	}
+
+	// 🔹 Ambil relasi: Category
+	var category model.ProductCategory
+	err := r.db.GetContext(ctx, &category, `SELECT id, name, created_at, updated_at FROM product_categories WHERE id = $1`, product.CategoryID)
+	if err == nil {
+		product.Category = &category
+	}
+
+	// 🔹 Ambil relasi: Condition
+	var condition model.ProductCondition
+	err = r.db.GetContext(ctx, &condition, `SELECT id, name, created_at, updated_at FROM product_conditions WHERE id = $1`, product.ConditionID)
+	if err == nil {
+		product.Condition = &condition
+	}
+
+	// 🔹 Ambil relasi: Size
+	if product.SizeID != nil {
+		var size model.ProductSize
+		err := r.db.GetContext(ctx, &size, `SELECT id, name FROM product_size WHERE id = $1`, *product.SizeID)
+		if err == nil {
+			product.Size = &size
+		}
+	}
+
+	// 🔹 Ambil relasi: Shop
+	var shop model.Shop
+	err = r.db.GetContext(ctx, &shop, `
+		SELECT id, account_id, name, summary, description, active, created_at, updated_at
+		FROM shop WHERE id = $1
+	`, product.ShopID)
+	if err == nil {
+		product.Shop = &shop
+	}
+
+	// 🔹 Ambil relasi: Images
+	var images []model.ProductImage
+	err = r.db.SelectContext(ctx, &images, `
+		SELECT id, product_id, image_index, url, created_at
+		FROM product_images
+		WHERE product_id = $1
+		ORDER BY image_index ASC
+	`, product.ID)
+	if err == nil {
+		product.Images = images
+	}
+
+	return product, nil
+}

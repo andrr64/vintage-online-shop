@@ -5,6 +5,7 @@ package account
 import (
 	"context"
 	"mime/multipart"
+	common "vintage-server/internal/common/dto"
 	"vintage-server/internal/model" // Sesuaikan dengan path proyekmu
 
 	"github.com/gin-gonic/gin"
@@ -74,7 +75,7 @@ type AccountService interface {
 	// --- Wishlist Management ---
 	// Usecase: CustomerAdd/View/Remove Wishlist
 	AddToWishlist(ctx context.Context, userID, productID uuid.UUID) error
-	GetWishlistByUserID(ctx context.Context, userID int64) ([]WishlistItemDetail, error)
+	GetWishlistByUserID(ctx context.Context, data WishlistFilter) (common.Pagination[WishlistItemDetail], error)
 	RemoveFromWishlist(ctx context.Context, userID int64, productID int64) error
 }
 
@@ -111,8 +112,14 @@ type AccountRepository interface {
 
 	// --- Wishlist ---
 	SaveWishlistItem(ctx context.Context, item model.Wishlist) error
-	FindWishlistByAccountID(ctx context.Context, accountID int64) ([]WishlistItemDetail, error)
+	FindWishlistByAccountID(
+		ctx context.Context,
+		accountID uuid.UUID,
+		keyword string,
+		limit, offset int,
+	) ([]model.Wishlist, int, error)
 	DeleteWishlistItem(ctx context.Context, accountID, productID int64) error
 	CheckWishlistItemExists(ctx context.Context, accountID, productID int64) (bool, error)
 	IsUsernameUsed(ctx context.Context, username string) (bool, error)
+	FindProductByID(ctx context.Context, productID uuid.UUID) (model.Product, error)
 }

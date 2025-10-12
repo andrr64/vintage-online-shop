@@ -10,11 +10,18 @@ import (
 // WishlistItemDetail adalah DTO untuk menampilkan wishlist beserta detail produk.
 // Ini didefinisikan di sini agar Repository tahu bentuk data apa yang harus dikembalikan.
 type WishlistItemDetail struct {
-	ProductID       int64     `json:"product_id" `
+	ProductID       uuid.UUID `json:"product_id" `
 	ProductName     string    `json:"product_name" `
-	ProductPrice    int64     `json:"product_price" `
+	ProductPrice    float32   `json:"product_price" `
 	ProductImageURL string    `json:"product_image_url"`
 	AddedAt         time.Time `json:"added_at" `
+}
+
+type WishlistFilter struct {
+	Page      int    `json:"page" form:"page"`
+	Size      int    `json:"size" form:"size"`
+	Keyword   string `json:"keyword" form:"keyword"`
+	AccountID uuid.UUID `json:"-"` // diset dari token, bukan dari request
 }
 
 type UserAddress struct {

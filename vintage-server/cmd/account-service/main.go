@@ -67,6 +67,7 @@ func main() {
 					protected.PUT("/address/set-primary", accountHandler.SetPrimaryAddress)
 					
 					protected.POST("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), accountHandler.AddToWishlist)
+					protected.GET("/wishlist", middleware.AuthRoleMiddleware("customer"), accountHandler.GetWishlist)
 				}
 			}
 
