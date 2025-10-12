@@ -11,6 +11,11 @@ import (
 	handler "vintage-server/internal/handler/account"
 	repository "vintage-server/internal/repository/account"
 	service "vintage-server/internal/service/account" // Sesuaikan path
+
+	handlerV2 "vintage-server/internal/account/handler"
+	repoV2 "vintage-server/internal/account/repository"
+	serviceV2 "vintage-server/internal/account/service"
+
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -39,6 +44,10 @@ func main() {
 		return
 	}
 
+	storev2 := repoV2.NewAccountStore(db)
+	servicev2 := serviceV2.NewAccountServices(storev2, cfg.JWTSecretKey, cloudinary)
+	handlerv2 := handlerV2.NewAccountHandler(*servicev2)
+
 	accountStore := repository.NewAccountStore(db)
 	accountService := service.NewService(accountStore, cfg.JWTSecretKey, cloudinary)
 	accountHandler := handler.NewAccountHandler(accountService)
@@ -56,8 +65,9 @@ func main() {
 				protected.Use(middleware.AuthMiddleware(auth.NewJWTService(cfg.JWTSecretKey)))
 				{
 					protected.POST("/logout", accountHandler.Logout)
-					protected.PUT("/update-profile", accountHandler.UpdateProfile)
-					protected.PUT("/update-avatar", accountHandler.UpdateAvatar)
+
+					protected.PUT("/profile/update-profile", accountHandler.UpdateProfile)
+					protected.PUT("/profile/update-avatar", accountHandler.UpdateAvatar)
 
 					protected.POST("/address", accountHandler.CreateAddress)
 					protected.PUT("/address", accountHandler.UpdateAddress)
@@ -65,26 +75,21 @@ func main() {
 					protected.DELETE("/address", accountHandler.DeleteAddress)
 
 					protected.PUT("/address/set-primary", accountHandler.SetPrimaryAddress)
-					
-					protected.POST("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), accountHandler.AddToWishlist)
-					protected.GET("/wishlist", middleware.AuthRoleMiddleware("customer"), accountHandler.GetWishlist)
+
+					protected.POST("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), handlerv2.AddToWishlist)
+					protected.DELETE("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), handlerv2.RemoveFromWishlist)
+					protected.GET("/wishlist", middleware.AuthRoleMiddleware("customer"), handlerv2.GetWishlist)
 				}
 			}
-
-			customer := account.Group("/customer")
+			login := account.Group("/login")
 			{
-				customer.POST("/register", accountHandler.RegisterCustomer)
-				customer.POST("/login", accountHandler.LoginCustomer)
-
+				login.POST("/customer", handlerv2.LoginCustomer)
+				login.POST("/admin", handlerv2.LoginAdmin)
+				login.POST("/seller", handlerv2.LoginSeller)
 			}
-			admin := account.Group("/admin")
+			register := account.Group("/register")
 			{
-				admin.POST("/login", accountHandler.LoginAdmin)
-			}
-
-			seller := account.Group("/seller")
-			{
-				seller.POST("/login", accountHandler.LoginSeller)
+				register.POST("/customer", accountHandler.RegisterCustomer)
 			}
 		}
 

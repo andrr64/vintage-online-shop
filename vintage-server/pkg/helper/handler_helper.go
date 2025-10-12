@@ -1,12 +1,12 @@
 package helper
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"vintage-server/pkg/apperror"
 	"vintage-server/pkg/response"
+	serviceerror "vintage-server/pkg/service_error"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -47,12 +47,21 @@ func CheckAuthAndRole(c *gin.Context, allowedRoles ...string) (uuid.UUID, error)
 
 // handleError adalah helper internal untuk menangani error dari service secara konsisten
 func HandleError(c *gin.Context, err error) {
-	var appErr *apperror.AppError
-	if errors.As(err, &appErr) {
-		response.Error(c, appErr.Code, appErr.Message)
-	} else {
-		// Sembunyikan detail error internal dari client
-		response.Error(c, http.StatusInternalServerError, "an unexpected internal error occurred")
+	switch e := err.(type) {
+	case *serviceerror.ServiceError:
+		switch e.Code {
+		case serviceerror.ErrBadRequest:
+			response.ErrorBadRequest(c, e.Message)
+		case serviceerror.ErrConflict:
+			response.ErrorConflict(c, e.Message)
+		case serviceerror.ErrNotFound:
+			response.ErrorNotFound(c, e.Message)
+		default:
+			response.ErrorInternalServer(c)
+		}
+	default:
+		// fallback internal server
+		response.ErrorInternalServer(c)
 	}
 }
 
@@ -86,5 +95,13 @@ func CheckBody[T any](c *gin.Context, t *T) bool {
 		return false
 	}
 
+	return true
+}
+
+// BindJSON binds request JSON into struct T and returns true if successful
+func BindJSON[T any](c *gin.Context, out *T) bool {
+	if err := c.ShouldBindJSON(out); err != nil {
+		return false
+	}
 	return true
 }

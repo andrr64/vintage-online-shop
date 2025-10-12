@@ -171,7 +171,6 @@ func (r *sqlAccountRepository) UpdateAvatar(ctx context.Context, avatarUrl strin
 	return savedAccount, nil
 }
 
-
 func (r *sqlAccountRepository) FindProductByID(ctx context.Context, productID uuid.UUID) (model.Product, error) {
 	// 🔹 Ambil data utama produk
 	query := `

@@ -24,7 +24,6 @@ func Success[T any](c *gin.Context, statusCode int, data T) {
 	c.JSON(statusCode, APIResponse[T]{Data: data})
 }
 
-
 func SuccessOK[T any](c *gin.Context, data T) {
 	Success(c, http.StatusOK, data)
 }
@@ -61,6 +60,22 @@ func ErrorBadRequest(c *gin.Context, message ...string) {
 		msg = message[0]
 	}
 	c.JSON(http.StatusBadRequest, APIResponse[any]{Detail: utils.Ptr(msg)})
+}
+
+func ErrorConflict(c *gin.Context, message ...string) {
+	msg := "Client closed request"
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	c.JSON(http.StatusConflict, APIResponse[any]{Detail: utils.Ptr(msg)})
+}
+
+func ErrorNotFound(c *gin.Context, message ...string) {
+	msg := "Resource not found"
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	c.JSON(http.StatusNotFound, APIResponse[any]{Detail: utils.Ptr(msg)})
 }
 
 func ErrorUnauthorized(c *gin.Context, message ...string) {

@@ -3,6 +3,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,7 +24,7 @@ func NewJWTService(secretKey string) *JWTService {
 // Update: Role jadi array string (user bisa punya banyak role).
 type Claims struct {
 	AccountID uuid.UUID `json:"account_id"`
-	Role     string    `json:"role"`
+	Role      string    `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -31,11 +32,11 @@ type Claims struct {
 func (s *JWTService) GenerateToken(userID uuid.UUID, role string) (string, error) {
 	// Tentukan masa berlaku token
 	expirationTime := time.Now().Add(24 * time.Hour)
-
+	log.Printf("Creating token for role : %s", role)
 	// Buat claims
 	claims := &Claims{
 		AccountID: userID,
-		Role:     role,
+		Role:      role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
