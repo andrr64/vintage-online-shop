@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connec to Cloudinary service: %v", err)
 		return
-	}	
+	}
 
 	accountStore := repository.NewAccountStore(db)
 	accountService := service.NewService(accountStore, cfg.JWTSecretKey, cloudinary)
@@ -65,6 +65,8 @@ func main() {
 					protected.DELETE("/address", accountHandler.DeleteAddress)
 
 					protected.PUT("/address/set-primary", accountHandler.SetPrimaryAddress)
+					
+					protected.POST("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), accountHandler.AddToWishlist)
 				}
 			}
 

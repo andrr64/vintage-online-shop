@@ -48,12 +48,10 @@ func (r *sqlAccountRepository) DeleteWishlistItem(ctx context.Context, accountID
 func (r *sqlAccountRepository) SaveWishlistItem(ctx context.Context, item model.Wishlist) error {
 	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
 	defer cancel()
-
 	query := `
-		INSERT INTO wishlist (account_id, product_id, created_at, updated_at)
-		VALUES (:account_id, :product_id, :created_at, :updated_at)
+		INSERT INTO wishlist (account_id, product_id)
+		VALUES (:account_id, :product_id)
 	`
-
 	_, err := r.db.NamedExecContext(ctx, query, item)
 	return err
 }

@@ -1,6 +1,8 @@
 package account
 
-import "vintage-server/internal/domain/account"
+import (
+	"vintage-server/internal/domain/account"
+)
 
 type handler struct {
 	svc account.AccountService

@@ -32,6 +32,11 @@ type AccountHandler interface {
 	UpdateAddress(c *gin.Context)
 	DeleteAddress(c *gin.Context)
 	SetPrimaryAddress(c *gin.Context)
+
+	// Wishlist Management
+	AddToWishlist(c *gin.Context)
+	GetWishlist(c *gin.Context)
+	RemoveFromWishlist(c *gin.Context)
 }
 
 // =================================================================================
@@ -68,7 +73,7 @@ type AccountService interface {
 
 	// --- Wishlist Management ---
 	// Usecase: CustomerAdd/View/Remove Wishlist
-	AddToWishlist(ctx context.Context, userID, productID int64) error
+	AddToWishlist(ctx context.Context, userID, productID uuid.UUID) error
 	GetWishlistByUserID(ctx context.Context, userID int64) ([]WishlistItemDetail, error)
 	RemoveFromWishlist(ctx context.Context, userID int64, productID int64) error
 }
