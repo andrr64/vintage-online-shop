@@ -2,6 +2,7 @@ package product
 
 import (
 	"net/http"
+	"strconv"
 	product "vintage-server/internal/domain"
 	"vintage-server/pkg/helper"
 	"vintage-server/pkg/response"
@@ -73,7 +74,6 @@ func (h *handler) CreateProductSize(c *gin.Context) {
 	response.SuccessCreated(c, result)
 }
 
-// UpdateProduct implements product.ProductHandler.
 func (h *handler) UpdateProduct(c *gin.Context) {
 	accountID, err := helper.ExtractAccountID(c)
 	if err != nil {
@@ -111,4 +111,67 @@ func (h *handler) GetProuctByID(c *gin.Context) {
 		return
 	}
 	response.Success(c, http.StatusOK, result)
+}
+
+func (h *handler) SellerGetProducts(c *gin.Context) {
+	accountID, err := helper.ExtractAccountID(c)
+	if err != nil {
+		response.ErrorUnauthorized(c, "Invalid Account")
+		return
+	}
+
+	// Pagination
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 || size > 100 {
+		size = 10
+	}
+
+	keyword := c.Query("keyword")
+
+	var (
+		categoryID  *int
+		brandID     *int
+		sizeID      *int
+		conditionID *int16
+	)
+
+	// Convert query ke pointer integer jika ada
+	if v := c.Query("category_id"); v != "" {
+		if id, err := strconv.Atoi(v); err == nil {
+			categoryID = &id
+		}
+	}
+	if v := c.Query("brand_id"); v != "" {
+		if id, err := strconv.Atoi(v); err == nil {
+			brandID = &id
+		}
+	}
+	if v := c.Query("size_id"); v != "" {
+		if id, err := strconv.Atoi(v); err == nil {
+			sizeID = &id
+		}
+	}
+	if v := c.Query("condition_id"); v != "" {
+		if id, err := strconv.Atoi(v); err == nil {
+			tmp := int16(id)
+			conditionID = &tmp
+		}
+	}
+	filter := product.ProductFilterDTO{
+		Keyword:     keyword,
+		CategoryID:  categoryID,
+		BrandID:     brandID,
+		SizeID:      sizeID,
+		ConditionID: conditionID,
+	}
+	products, err := h.svc.FindProductsBySeller(c.Request.Context(), accountID, filter, page, size)
+	if err != nil {
+		response.ErrorInternalServer(c, err.Error())
+		return
+	}
+	response.SuccessOK(c, products)
 }

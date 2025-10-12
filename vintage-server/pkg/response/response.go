@@ -24,6 +24,11 @@ func Success[T any](c *gin.Context, statusCode int, data T) {
 	c.JSON(statusCode, APIResponse[T]{Data: data})
 }
 
+
+func SuccessOK[T any](c *gin.Context, data T) {
+	Success(c, http.StatusOK, data)
+}
+
 func SuccessWD_Created(c *gin.Context) {
 	SuccessWithoutData(c, http.StatusCreated, "Created successfully")
 }

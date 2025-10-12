@@ -581,6 +581,49 @@ func (s *service) UpdateProduct(ctx context.Context, accountID uuid.UUID, reques
 	return resp, nil
 }
 
+// FindProductsBySeller implements product.ProductService.
+func (s *service) FindProductsBySeller(
+	ctx context.Context,
+	accountID uuid.UUID,
+	filter product.ProductFilterDTO,
+	page int,
+	size int,
+) (product.PaginatedProductDTO, error) {
+
+	// 🔹 Ambil data dari repository
+	products, total, err := s.store.FindProductsBySeller(ctx, accountID, filter, page, size)
+	if err != nil {
+		return product.PaginatedProductDTO{}, err
+	}
+
+	// 🔹 Mapping ke DTO
+	items := make([]product.ProductDTO, len(products))
+	for i, p := range products {
+		items[i] = product.ToProductDTO(p)
+	}
+
+	// 🔹 Hitung pagination
+	totalPages := 0
+	if size > 0 {
+		totalPages = (total + size - 1) / size
+	}
+
+	paginated := product.PaginatedProductDTO{
+		Page:       page,
+		Size:       size,
+		TotalItems: total,
+		TotalPages: totalPages,
+		Items:      items,
+	}
+
+	return paginated, nil
+}
+
+// helper kecil biar gak nulis manual
+func ptrInt(v int) *int {
+	return &v
+}
+
 func NewProductService(store repository.ProductStore, jwt auth.JWTService, uploader uploader.Uploader) product.ProductService {
 	return &service{
 		store:    store,

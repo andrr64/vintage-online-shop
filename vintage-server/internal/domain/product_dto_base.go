@@ -47,6 +47,25 @@ type ProductDTO struct {
 	Images      []ProductImageDTO   `json:"images"`
 }
 
+type ProductFilterDTO struct {
+	Keyword     string  `json:"keyword,omitempty"`      // cari berdasarkan nama produk
+	CategoryID  *int    `json:"category_id,omitempty"`  // filter kategori
+	BrandID     *int    `json:"brand_id,omitempty"`     // filter brand
+	SizeID      *int    `json:"size_id,omitempty"`      // filter ukuran
+	ConditionID *int16  `json:"condition_id,omitempty"` // filter kondisi (baru/bekas)
+	MinPrice    *int64  `json:"min_price,omitempty"`    // filter harga minimum
+	MaxPrice    *int64  `json:"max_price,omitempty"`    // filter harga maksimum
+	ShopID      *string `json:"shop_id,omitempty"`      // filter produk milik toko tertentu
+}
+
+type PaginatedProductDTO struct {
+	Page       int          `json:"page"`
+	Size       int          `json:"size"`
+	TotalItems int          `json:"total_items"`
+	TotalPages int          `json:"total_pages"`
+	Items      []ProductDTO `json:"items"`
+}
+
 func ToProductDTO(p model.Product) ProductDTO {
 	dto := ProductDTO{
 		ID:          p.ID,

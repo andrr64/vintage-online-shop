@@ -73,8 +73,9 @@ func main() {
 				protected.DELETE("/condition/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCondition)
 
 				// Product
-				protected.POST("/product/create", middleware.AuthRoleMiddleware("seller"), productHandler.CreateProduct)
-				protected.PUT("/product/update", middleware.AuthRoleMiddleware("seller"), productHandler.UpdateProduct)
+				protected.POST("/seller/create", middleware.AuthRoleMiddleware("seller"), productHandler.CreateProduct)
+				protected.PUT("/seller/update", middleware.AuthRoleMiddleware("seller"), productHandler.UpdateProduct)
+				protected.GET("/seller/get-products", middleware.AuthRoleMiddleware("seller"), productHandler.SellerGetProducts)
 
 				// Size
 				protected.POST("/size", middleware.AuthRoleMiddleware("admin"), productHandler.CreateProductSize)

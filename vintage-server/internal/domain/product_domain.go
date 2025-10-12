@@ -52,6 +52,13 @@ type ProductRepository interface {
 	UpdateProduct(ctx context.Context, p model.Product) (model.Product, error)
 	FindProductByIDAndShop(ctx context.Context, productID, shopID uuid.UUID) (model.Product, error)
 	FindProductByID(ctx context.Context, productID uuid.UUID) (model.Product, error)
+	FindProductsBySeller(
+		ctx context.Context,
+		accountID uuid.UUID,
+		filter ProductFilterDTO,
+		page int,
+		size int,
+	) ([]model.Product, int, error)
 
 	// -- SIZE
 	CreateProductSize(ctx context.Context, productSize model.ProductSize) (model.ProductSize, error)
@@ -83,6 +90,7 @@ type ProductService interface {
 	CreateProduct(ctx context.Context, accountID uuid.UUID, request CreateProductRequest) (ProductDTO, error)
 	UpdateProduct(ctx context.Context, accountID uuid.UUID, request UpdateProductDTO) (ProductDTO, error)
 	FindProductByID(ctx context.Context, productID uuid.UUID) (ProductDTO, error)
+	FindProductsBySeller(ctx context.Context, accountID uuid.UUID, filter ProductFilterDTO, page, size int) (PaginatedProductDTO, error)
 
 	// -- SIZE
 	CreateProductSize(ctx context.Context, request ProductConditionRequest) (ProductSizeDTO, error)
@@ -111,6 +119,7 @@ type ProductHandler interface {
 	CreateProduct(c *gin.Context)
 	UpdateProduct(c *gin.Context)
 	GetProuctByID(c *gin.Context)
+	SellerGetProducts(c *gin.Context)
 
 	// -- PRODUCT SIZE MANAGEMENT --
 	CreateProductSize(c *gin.Context)

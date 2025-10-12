@@ -92,6 +92,112 @@ func (r *productRepository) FindProductByID(ctx context.Context, productID uuid.
 	return product, nil
 }
 
+// FindProductsBySeller implements product.ProductRepository.
+func (r *productRepository) FindProductsBySeller(
+	ctx context.Context,
+	accountID uuid.UUID,
+	filter product.ProductFilterDTO,
+	page int,
+	size int,
+) ([]model.Product, int, error) {
+	// 🔹 Base query
+	query := `
+		SELECT 
+			p.id, p.shop_id, p.condition_id, p.category_id, p.brand_id, p.size_id,
+			p.name, p.summary, p.description, p.price, p.stock,
+			p.created_at, p.updated_at
+		FROM products p
+		JOIN shop s ON p.shop_id = s.id
+		WHERE s.account_id = $1
+	`
+	args := []interface{}{accountID}
+	argIndex := 2
+
+	// 🔹 Filter opsional
+	if filter.Keyword != "" {
+		query += fmt.Sprintf(" AND LOWER(p.name) LIKE LOWER($%d)", argIndex)
+		args = append(args, "%"+filter.Keyword+"%")
+		argIndex++
+	}
+	if filter.CategoryID != nil {
+		query += fmt.Sprintf(" AND p.category_id = $%d", argIndex)
+		args = append(args, *filter.CategoryID)
+		argIndex++
+	}
+	if filter.BrandID != nil {
+		query += fmt.Sprintf(" AND p.brand_id = $%d", argIndex)
+		args = append(args, *filter.BrandID)
+		argIndex++
+	}
+	if filter.SizeID != nil {
+		query += fmt.Sprintf(" AND p.size_id = $%d", argIndex)
+		args = append(args, *filter.SizeID)
+		argIndex++
+	}
+	if filter.ConditionID != nil {
+		query += fmt.Sprintf(" AND p.condition_id = $%d", argIndex)
+		args = append(args, *filter.ConditionID)
+		argIndex++
+	}
+
+	// 🔹 Hitung total data
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS total", query)
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery, args...); err != nil {
+		return nil, 0, err
+	}
+
+	// 🔹 Tambah pagination & urutan
+	offset := (page - 1) * size
+	query += fmt.Sprintf(" ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, size, offset)
+
+	// 🔹 Ambil data produk
+	var products []model.Product
+	if err := r.db.SelectContext(ctx, &products, query, args...); err != nil {
+		return nil, 0, err
+	}
+
+	// 🔹 Ambil relasi per produk (Brand, Category, Condition, Size, Images)
+	for i, p := range products {
+		// Brand
+		if p.BrandID != nil {
+			var brand model.Brand
+			_ = r.db.GetContext(ctx, &brand, `SELECT id, name, logo_url FROM brands WHERE id = $1`, *p.BrandID)
+			products[i].Brand = &brand
+		}
+
+		// Category
+		var category model.ProductCategory
+		_ = r.db.GetContext(ctx, &category, `SELECT id, name FROM product_categories WHERE id = $1`, p.CategoryID)
+		products[i].Category = &category
+
+		// Condition
+		var condition model.ProductCondition
+		_ = r.db.GetContext(ctx, &condition, `SELECT id, name FROM product_conditions WHERE id = $1`, p.ConditionID)
+		products[i].Condition = &condition
+
+		// Size
+		if p.SizeID != nil {
+			var size model.ProductSize
+			_ = r.db.GetContext(ctx, &size, `SELECT id, name FROM product_size WHERE id = $1`, *p.SizeID)
+			products[i].Size = &size
+		}
+
+		// Images
+		var images []model.ProductImage
+		_ = r.db.SelectContext(ctx, &images, `
+			SELECT id, product_id, image_index, url, created_at
+			FROM product_images
+			WHERE product_id = $1
+			ORDER BY image_index ASC
+		`, p.ID)
+		products[i].Images = images
+	}
+
+	return products, total, nil
+}
+
 // UpdateProductImageIndex implements product.ProductRepository.
 func (r *productRepository) UpdateProductImageIndex(ctx context.Context, imageURL string, newIndex int16) error {
 	const query = `
