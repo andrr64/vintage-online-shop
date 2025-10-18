@@ -11,8 +11,8 @@ import (
 
 // APIResponse adalah struct generic untuk semua response JSON dari API kita.
 type APIResponse[T any] struct {
-	Data   T       `json:"data,omitempty"`
-	Detail *string `json:"detail,omitempty"`
+	Data   T       `json:"data"`
+	Detail *string `json:"detail"`
 }
 
 // =================================================================================

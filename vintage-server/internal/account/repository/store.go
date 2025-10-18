@@ -16,6 +16,7 @@ type AccountStore interface {
 	// getter untuk akses repo
 	GetWishlistRepo() WishlistRepository
 	GetAccountRepo() AccountRepository
+	GetAddressRepo() AddressRepository
 }
 
 // accountSqlStore implementasi AccountStore
@@ -24,6 +25,7 @@ type accountSqlStore struct {
 
 	WishlistRepo WishlistRepository
 	AccountRepo  AccountRepository
+	AddressRepo  AddressRepository
 }
 
 // constructor
@@ -32,6 +34,7 @@ func NewAccountStore(db db.DBTX) AccountStore {
 		db:           db,
 		WishlistRepo: NewWishlistRepositoryPostgres(db),
 		AccountRepo:  NewAccountRepositoryPostgres(db),
+		AddressRepo:  NewAddressRepositoryPostgres(db),
 	}
 }
 
@@ -70,4 +73,8 @@ func (s *accountSqlStore) GetWishlistRepo() WishlistRepository {
 // getter AccountRepo
 func (s *accountSqlStore) GetAccountRepo() AccountRepository {
 	return s.AccountRepo
+}
+
+func (s *accountSqlStore) GetAddressRepo() AddressRepository {
+	return s.AddressRepo
 }

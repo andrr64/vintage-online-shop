@@ -57,11 +57,11 @@ func HandleError(c *gin.Context, err error) {
 		case serviceerror.ErrNotFound:
 			response.ErrorNotFound(c, e.Message)
 		default:
-			response.ErrorInternalServer(c)
+			response.ErrorInternalServer(c, e.Error())
 		}
 	default:
 		// fallback internal server
-		response.ErrorInternalServer(c)
+		response.ErrorInternalServer(c, e.Error())
 	}
 }
 

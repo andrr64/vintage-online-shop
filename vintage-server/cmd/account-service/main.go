@@ -69,12 +69,12 @@ func main() {
 					protected.PUT("/profile/update-profile", accountHandler.UpdateProfile)
 					protected.PUT("/profile/update-avatar", accountHandler.UpdateAvatar)
 
-					protected.POST("/address", accountHandler.CreateAddress)
+					protected.POST("/address", handlerv2.CreateAddress)
 					protected.PUT("/address", accountHandler.UpdateAddress)
-					protected.GET("/address", accountHandler.GetAddresses)
-					protected.DELETE("/address", accountHandler.DeleteAddress)
+					protected.GET("/address", handlerv2.GetAddresses)
+					protected.DELETE("/address/:address-id", handlerv2.DeleteAddress)
 
-					protected.PUT("/address/set-primary", accountHandler.SetPrimaryAddress)
+					protected.PUT("/address/set-primary/:address-id", handlerv2.SetPrimaryAddress)
 
 					protected.POST("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), handlerv2.AddToWishlist)
 					protected.DELETE("/wishlist/:product-id", middleware.AuthRoleMiddleware("customer"), handlerv2.RemoveFromWishlist)

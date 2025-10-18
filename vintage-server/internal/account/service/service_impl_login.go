@@ -12,9 +12,14 @@ import (
 )
 
 type loginServiceImpl struct {
-	store    repository.AccountRepository
+	store    repository.AccountStore
 	jwt      *auth.JWTService
 	uploader uploader.Uploader
+}
+
+// RegisterAs implements RegisterService.
+func (l *loginServiceImpl) RegisterAs(c context.Context, role string, req dto.RegisterRequest) {
+	panic("unimplemented")
 }
 
 // LoginAs implements LoginService.
@@ -27,13 +32,13 @@ func (l *loginServiceImpl) LoginAs(ctx context.Context, role string, req dto.Log
 		if e != nil {
 			return dto.LoginResponse{}, serviceerror.New(serviceerror.ErrBadRequest, "Invalid email.", e)
 		}
-		account, err = l.store.FindAccountByEmailAndRoleString(ctx, email, role)
+		account, err = l.store.GetAccountRepo().FindAccountByEmailAndRoleString(ctx, email, role)
 	} else {
 		username, e := domain.NewUsername(req.Identifier)
 		if e != nil {
 			return dto.LoginResponse{}, serviceerror.New(serviceerror.ErrBadRequest, "Invalid username.", e)
 		}
-		account, err = l.store.FindAccountByUsernameAndRoleString(ctx, username, role)
+		account, err = l.store.GetAccountRepo().FindAccountByUsernameAndRoleString(ctx, username, role)
 	}
 
 	if err != nil {
@@ -52,7 +57,7 @@ func (l *loginServiceImpl) LoginAs(ctx context.Context, role string, req dto.Log
 	return dto.CreateLoginResponse(token, account), nil
 }
 
-func NewLoginService(store repository.AccountRepository, jwtSecret string, uploader uploader.Uploader) LoginService {
+func NewLoginService(store repository.AccountStore, jwtSecret string, uploader uploader.Uploader) LoginService {
 	return &loginServiceImpl{
 		store:    store,
 		jwt:      auth.NewJWTService(jwtSecret),

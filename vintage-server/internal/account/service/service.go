@@ -9,12 +9,16 @@ import (
 type AccountServices struct {
 	Wishlist WishlistService
 	Login    LoginService
+	Register RegisterService
+	Address  AddressService
 }
 
 // constructor
 func NewAccountServices(store repository.AccountStore, jwtSecret string, upSvc uploader.Uploader) *AccountServices {
 	return &AccountServices{
-		Wishlist: NewWishlistService(store.GetWishlistRepo()),
-		Login:    NewLoginService(store.GetAccountRepo(), jwtSecret, upSvc),
+		Wishlist: NewWishlistService(store),
+		Login:    NewLoginService(store, jwtSecret, upSvc),
+		Register: NewRegisterService(store, jwtSecret),
+		Address:  NewAddressService(store),
 	}
 }

@@ -6,11 +6,46 @@ import (
 	"vintage-server/internal/account/model"
 	"vintage-server/internal/shared/db"
 	db_error "vintage-server/pkg"
+
+	"github.com/google/uuid"
 )
 
 // WithTx implements AccountRepository.
 func (a *accountRepoPostgres) WithTx(tx db.DBTX) AccountRepository {
 	return &accountRepoPostgres{db: tx}
+}
+
+func (r *accountRepoPostgres) AssignRole(ctx context.Context, accountID uuid.UUID, role string) error {
+	query := `
+        INSERT INTO account_roles (account_id, role_id)
+        SELECT $1, r.id
+        FROM roles r
+        WHERE r.name = $2
+    `
+	_, err := r.db.ExecContext(ctx, query, accountID, role)
+	return db_error.HandlePgError(err)
+}
+
+// CreateAccount implements AccountRepository.
+func (r *accountRepoPostgres) CreateAccount(ctx context.Context, account domain.Account) (domain.Account, error) {
+	query := `
+        INSERT INTO accounts (username, firstname, lastname, password, email, avatar_url, active, created_at, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW())
+        RETURNING id, created_at, updated_at
+    `
+	row := r.db.QueryRowContext(ctx, query,
+		account.Username,
+		account.Firstname,
+		account.Lastname,
+		account.Password,
+		account.Email,
+		account.AvatarURL,
+		account.Active,
+	)
+	if err := row.Scan(&account.ID, &account.CreatedAt, &account.UpdatedAt); err != nil {
+		return domain.Account{}, db_error.HandlePgError(err)
+	}
+	return account, nil
 }
 
 func (a *accountRepoPostgres) FindAccountByUsernameAndRoleString(
