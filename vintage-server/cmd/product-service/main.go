@@ -59,7 +59,7 @@ func main() {
 			// Rute Publik
 			productGroup.GET("/category", productHandler.ReadCategories)
 			productGroup.GET("/brand", handlerV2.ReadBrand)
-			productGroup.GET("/condition", productHandler.ReadConditions)
+			productGroup.GET("/condition", handlerV2.ReadConditions)
 			productGroup.GET("/:id", productHandler.GetProuctByID)
 
 			// Rute Terproteksi
@@ -78,9 +78,9 @@ func main() {
 				protected.DELETE("/brand/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.DeleteBrand)
 
 				// Condition
-				protected.POST("/condition", middleware.AuthRoleMiddleware("admin"), productHandler.CreateCondition)
-				protected.PUT("/condition/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateCondition)
-				protected.DELETE("/condition/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCondition)
+				protected.POST("/condition", middleware.AuthRoleMiddleware("admin"), handlerV2.CreateCondition)
+				protected.PUT("/condition/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.UpdateCondition)
+				protected.DELETE("/condition/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.DeleteCondition)
 
 				// Product
 				protected.POST("/seller/create", middleware.AuthRoleMiddleware("seller"), productHandler.CreateProduct)

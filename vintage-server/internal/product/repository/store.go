@@ -12,18 +12,20 @@ type ProductStore interface {
 	ExecTx(ctx context.Context, fn func(ProductStore) error) error
 
 	GetBrandRepository() BrandRepository
+	GetProductConditionRepository() ProductConditionRepository
 }
 
 type productSqlStore struct {
-	db db.DBTX
-
-	BrandRepo BrandRepository
+	db                   db.DBTX
+	ProductConditionRepo ProductConditionRepository
+	BrandRepo            BrandRepository
 }
 
 func NewProductStore(db db.DBTX) ProductStore {
 	return &productSqlStore{
-		db:        db,
-		BrandRepo: NewBrandRepositoryPostgres(db),
+		db:                   db,
+		ProductConditionRepo: NewProductConditionRepoPostgres(db),
+		BrandRepo:            NewBrandRepositoryPostgres(db),
 	}
 }
 
@@ -40,8 +42,9 @@ func (p *productSqlStore) ExecTx(ctx context.Context, fn func(ProductStore) erro
 
 	// ✅ inject repo baru pakai koneksi transaksi
 	txStore := &productSqlStore{
-		db:        dbWithTx,
-		BrandRepo: NewBrandRepositoryPostgres(dbWithTx),
+		db:                   dbWithTx,
+		BrandRepo:            NewBrandRepositoryPostgres(dbWithTx),
+		ProductConditionRepo: NewProductConditionRepoPostgres(dbWithTx),
 	}
 
 	if err := fn(txStore); err != nil {
@@ -54,4 +57,9 @@ func (p *productSqlStore) ExecTx(ctx context.Context, fn func(ProductStore) erro
 // GetBrandRepository implements ProductStore.
 func (p *productSqlStore) GetBrandRepository() BrandRepository {
 	return p.BrandRepo
+}
+
+// GetBrandRepository implements ProductStore.
+func (p *productSqlStore) GetProductConditionRepository() ProductConditionRepository {
+	return p.ProductConditionRepo
 }

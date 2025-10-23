@@ -37,6 +37,22 @@ func GetParamInt(c *gin.Context, param string) (int, error) {
 	return v, nil
 }
 
+
+func GetParamInt16(c *gin.Context, param string) (int16, error) {
+	val := c.Param(param)
+	if val == "" {
+		return 0, fmt.Errorf("param %s is empty", param)
+	}
+
+	v64, err := strconv.ParseInt(val, 10, 16) // base 10, 16-bit
+	if err != nil {
+		return 0, fmt.Errorf("invalid param %s: %v", param, err)
+	}
+
+	return int16(v64), nil
+}
+
+
 // Ambil param sebagai string
 func GetParamString(c *gin.Context, param string) (string, error) {
 	val := c.Param(param)
@@ -86,6 +102,21 @@ func GetQueryInt(c *gin.Context, key string, defaultVal int) int {
 		return defaultVal
 	}
 	return val
+}
+
+
+func GetQueryInt16(c *gin.Context, key string, defaultVal int16) int16 {
+	valStr := c.Query(key)
+	if valStr == "" {
+		return defaultVal
+	}
+
+	val64, err := strconv.ParseInt(valStr, 10, 16) // base 10, 16-bit
+	if err != nil {
+		return defaultVal
+	}
+
+	return int16(val64)
 }
 
 // GetQueryInt64 mengambil query param sebagai int64, jika kosong atau invalid pakai default
