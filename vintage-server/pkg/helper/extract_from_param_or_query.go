@@ -23,6 +23,20 @@ func GetParamInt32(c *gin.Context, param string) (int32, error) {
 	return int32(v), nil
 }
 
+func GetParamInt(c *gin.Context, param string) (int, error) {
+	val := c.Param(param)
+	if val == "" {
+		return 0, fmt.Errorf("param %s is empty", param)
+	}
+
+	v, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, fmt.Errorf("invalid param %s: %v", param, err)
+	}
+
+	return v, nil
+}
+
 // Ambil param sebagai string
 func GetParamString(c *gin.Context, param string) (string, error) {
 	val := c.Param(param)

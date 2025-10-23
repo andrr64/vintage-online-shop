@@ -10,6 +10,11 @@ import (
 	handler "vintage-server/internal/handler/product"
 	repo "vintage-server/internal/repository"
 	service "vintage-server/internal/service"
+
+	handlerv2 "vintage-server/internal/product/handler"
+	storev2 "vintage-server/internal/product/repository"
+	servicev2 "vintage-server/internal/product/service"
+
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -39,6 +44,11 @@ func main() {
 	productService := service.NewProductService(productStore, *authService, cloudinaryService)
 	productHandler := handler.NewHandler(productService)
 
+	cloudinaryService2, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
+	storeV2 := storev2.NewProductStore(db)
+	serviceV2 := servicev2.NewProductServices(storeV2, cfg.JWTSecretKey, cloudinaryService2)
+	handlerV2 := handlerv2.NewProductHandler(*serviceV2)
+
 	// 4. Setup Router (tidak berubah)
 	router := gin.Default()
 
@@ -48,7 +58,7 @@ func main() {
 		{
 			// Rute Publik
 			productGroup.GET("/category", productHandler.ReadCategories)
-			productGroup.GET("/brand", productHandler.ReadBrand)
+			productGroup.GET("/brand", handlerV2.ReadBrand)
 			productGroup.GET("/condition", productHandler.ReadConditions)
 			productGroup.GET("/:id", productHandler.GetProuctByID)
 
@@ -63,9 +73,9 @@ func main() {
 				protected.DELETE("/category/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCategory)
 
 				// Brand
-				protected.POST("/brand", middleware.AuthRoleMiddleware("admin"), productHandler.CreateBrand)
-				protected.PUT("/brand/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateBrand)
-				protected.DELETE("/brand/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteBrand)
+				protected.POST("/brand", middleware.AuthRoleMiddleware("admin"), handlerV2.CreateBrand)
+				protected.PUT("/brand/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.UpdateBrand)
+				protected.DELETE("/brand/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.DeleteBrand)
 
 				// Condition
 				protected.POST("/condition", middleware.AuthRoleMiddleware("admin"), productHandler.CreateCondition)

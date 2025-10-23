@@ -619,11 +619,6 @@ func (s *service) FindProductsBySeller(
 	return paginated, nil
 }
 
-// helper kecil biar gak nulis manual
-func ptrInt(v int) *int {
-	return &v
-}
-
 func NewProductService(store repository.ProductStore, jwt auth.JWTService, uploader uploader.Uploader) product.ProductService {
 	return &service{
 		store:    store,
