@@ -119,7 +119,7 @@ func (s *accountService) RegisterCustomer(ctx context.Context, req account.Regis
 		}
 
 		// 4. ambil roleID & insert account_role
-		roleID, err := repoInTx.GetRoleIDByName(ctx, "customer")
+		roleID, err := repoInTx.GetRoleIDByName(ctx, "admin")
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"mime/multipart"
 	"net/http"
 	"vintage-server/internal/product/domain"
 	"vintage-server/internal/product/dto"
@@ -67,7 +68,7 @@ func (h *productHandler) ReadBrand(c *gin.Context) {
 
 // UpdateBrand update data brand
 func (h *productHandler) UpdateBrand(c *gin.Context) {
-	_, err := helper.GetParamInt32(c, "id")
+	id, err := helper.GetParamInt(c, "id")
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid brand ID")
 		return
@@ -78,6 +79,7 @@ func (h *productHandler) UpdateBrand(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	var f multipart.File
 
 	// File opsional
 	if form.FileHeader != nil {
@@ -86,14 +88,23 @@ func (h *productHandler) UpdateBrand(c *gin.Context) {
 			return
 		}
 
-		f, err := form.FileHeader.Open()
+		f, err = form.FileHeader.Open()
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "failed to open uploaded file")
 			return
 		}
 		defer f.Close()
 	}
-	response.Success(c, http.StatusOK, "OK")
+	data := domain.Brand{
+		ID: id,
+		Name: form.Name,
+	}
+	updated, err := h.svc.Brand.UpdateBrand(c, data, &f)
+	if err != nil {
+		helper.HandleError(c, err)
+		return
+	}
+	response.SuccessOK(c, updated)
 }
 
 // DeleteBrand hapus brand
