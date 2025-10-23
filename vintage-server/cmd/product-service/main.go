@@ -57,7 +57,7 @@ func main() {
 		productGroup := api.Group("/product")
 		{
 			// Rute Publik
-			productGroup.GET("/category", productHandler.ReadCategories)
+			productGroup.GET("/category", handlerV2.ReadCategories)
 			productGroup.GET("/brand", handlerV2.ReadBrand)
 			productGroup.GET("/condition", handlerV2.ReadConditions)
 			productGroup.GET("/:id", productHandler.GetProuctByID)
@@ -68,9 +68,9 @@ func main() {
 				middleware.AuthMiddleware(authService))
 			{
 				// Category
-				protected.POST("/category", middleware.AuthRoleMiddleware("admin"), productHandler.CreateCategory)
-				protected.PUT("/category/:id", middleware.AuthRoleMiddleware("admin"), productHandler.UpdateCategory) // Gunakan path param untuk konsistensi
-				protected.DELETE("/category/:id", middleware.AuthRoleMiddleware("admin"), productHandler.DeleteCategory)
+				protected.POST("/category", middleware.AuthRoleMiddleware("admin"), handlerV2.CreateCategory)
+				protected.PUT("/category/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.UpdateCategory) // Gunakan path param untuk konsistensi
+				protected.DELETE("/category/:id", middleware.AuthRoleMiddleware("admin"), handlerV2.DeleteCategory)
 
 				// Brand
 				protected.POST("/brand", middleware.AuthRoleMiddleware("admin"), handlerV2.CreateBrand)

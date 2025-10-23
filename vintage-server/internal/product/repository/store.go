@@ -13,19 +13,24 @@ type ProductStore interface {
 
 	GetBrandRepository() BrandRepository
 	GetProductConditionRepository() ProductConditionRepository
+	GetProductCategoryRepo() ProductCategoryRepository
 }
 
 type productSqlStore struct {
 	db                   db.DBTX
 	ProductConditionRepo ProductConditionRepository
 	BrandRepo            BrandRepository
+	ProductCategoryRepo  ProductCategoryRepository
 }
+
+
 
 func NewProductStore(db db.DBTX) ProductStore {
 	return &productSqlStore{
 		db:                   db,
 		ProductConditionRepo: NewProductConditionRepoPostgres(db),
 		BrandRepo:            NewBrandRepositoryPostgres(db),
+		ProductCategoryRepo:  NewProductCategoryRepoPostgres(db),
 	}
 }
 
@@ -62,4 +67,9 @@ func (p *productSqlStore) GetBrandRepository() BrandRepository {
 // GetBrandRepository implements ProductStore.
 func (p *productSqlStore) GetProductConditionRepository() ProductConditionRepository {
 	return p.ProductConditionRepo
+}
+
+// GetProductCategoryRepo implements ProductStore.
+func (p *productSqlStore) GetProductCategoryRepo() ProductCategoryRepository {
+	return p.ProductCategoryRepo
 }
