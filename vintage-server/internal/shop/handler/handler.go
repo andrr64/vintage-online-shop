@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"vintage-server/internal/shop/repository"
 	"vintage-server/internal/shop/service"
 
 	"github.com/gin-gonic/gin"
@@ -17,8 +16,8 @@ type shopHandler struct {
 	svc service.ShopServices
 }
 
-func NewShopHandler(store repository.ShopStore) ShopHandler {
+func NewShopHandler(svc service.ShopServices) ShopHandler {
 	return &shopHandler{
-		svc: service.NewShopService(store),
+		svc: svc,
 	}
 }

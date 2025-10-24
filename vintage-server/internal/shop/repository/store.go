@@ -10,33 +10,54 @@ import (
 
 type ShopStore interface {
 	ExecTx(ctx context.Context, fn func(ShopStore) error) error
+	GetShopRepo() ShopRepository
 }
 
 type shopSqlStore struct {
-	db db.DBTX
+	ShopRepo ShopRepository
+	db       db.DBTX
 }
 
-func NewShopStore(db db.DBTX) ShopStore {
-	return &shopSqlStore {
-		db: db,
+// GetShopRepo implements ShopStore.
+func (s *shopSqlStore) GetShopRepo() ShopRepository {
+	return s.ShopRepo
+}
+
+func NewShopStore(database db.DBTX) ShopStore {
+	return &shopSqlStore{
+		db:       database,
+		ShopRepo: NewShopPostgres(database),
 	}
 }
 
 func (s *shopSqlStore) ExecTx(ctx context.Context, fn func(ShopStore) error) error {
 	sqlDB, ok := s.db.(*sqlx.DB)
 	if !ok {
-		return fmt.Errorf("error on ShopStore.go: this db (db.DBTX) can't convert into *sqlx.DB")
+		return fmt.Errorf("error on ShopStore.go: db (db.DBTX) is not *sqlx.DB, cannot begin transaction")
 	}
-	dbWithTx, err := sqlDB.BeginTxx(ctx, nil)
+
+	tx, err := sqlDB.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
+
+	// buat instance baru shopSqlStore tapi dengan transaksi aktif
 	txStore := &shopSqlStore{
-		db: dbWithTx,
+		db:       tx,
+		ShopRepo: NewShopPostgres(tx), // penting: gunakan tx
 	}
+
+	// jalankan fungsi di dalam transaksi
 	if err := fn(txStore); err != nil {
-		_ = dbWithTx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
-	return dbWithTx.Commit()
+
+	// commit transaksi
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return nil
 }

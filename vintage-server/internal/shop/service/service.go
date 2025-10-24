@@ -1,14 +1,16 @@
 package service
 
-import "vintage-server/internal/shop/repository"
+import (
+	"vintage-server/internal/shop/repository"
+	"vintage-server/pkg/uploader"
+)
 
 type ShopServices struct {
 	Shop ShopService
 }
 
-
-func NewShopService(store repository.ShopStore) ShopServices {
+func NewShopServices(store repository.ShopStore, up uploader.Uploader) ShopServices {
 	return ShopServices{
-		Shop: NewShopService(store),
+		Shop: NewShopSvc(store, up),
 	}
 }
