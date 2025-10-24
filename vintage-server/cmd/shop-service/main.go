@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"vintage-server/internal/database"
-	handler "vintage-server/internal/handler/shop"
-	repo "vintage-server/internal/repository"
-	service "vintage-server/internal/service/shop"
+	"vintage-server/internal/shop/handler"
+	"vintage-server/internal/shop/repository"
+	"vintage-server/internal/shop/service"
 	"vintage-server/pkg/auth"
 	"vintage-server/pkg/config"
 	"vintage-server/pkg/middleware"
@@ -23,10 +23,16 @@ func main() {
 	}
 
 	// 1. Koneksi Database (tidak berubah)
+	// 1. Koneksi Database (tidak berubah)
 	db, err := database.NewPostgres(cfg.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Warning: failed to close DB: %v", err)
+		}
+	}()
 
 	cloudinary, err := uploader.NewCloudinaryUploader(cfg.CloudinaryURL)
 	if err != nil {
@@ -35,9 +41,9 @@ func main() {
 
 	authService := auth.NewJWTService(cfg.JWTSecretKey)
 
-	shopStore := repo.NewShopStore(db)
-	shopService := service.NewShopService(shopStore, *authService, cloudinary)
-	shopHandler := handler.NewHandler(shopService)
+	store := repository.NewShopStore(db)
+	service := service.NewShopServices(store, cloudinary)
+	handler := handler.NewShopHandler(service)
 
 	router := gin.Default()
 
@@ -47,8 +53,8 @@ func main() {
 		{
 			protected.Use(middleware.AuthMiddleware(authService))
 			{
-				protected.POST("/create", shopHandler.CreateShop)
-				protected.PUT("/update", shopHandler.UpdateShop)
+				protected.POST("/create", middleware.AuthRoleMiddleware("seller", "customer"), handler.CreateShop)
+				protected.PUT("/update", middleware.AuthRoleMiddleware("seller", "customer"), handler.UpdateShop)
 			}
 		}
 	}
